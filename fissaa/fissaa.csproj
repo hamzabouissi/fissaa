@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <PublishSingleFile>true</PublishSingleFile>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net6.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Amazon.CDK" Version="1.148.0" />
+      <PackageReference Include="Amazon.CDK.AWS.EC2" Version="1.148.0" />
+      <PackageReference Include="Amazon.CDK.AWS.ECS" Version="1.148.0" />
+      <PackageReference Include="AWSSDK.CloudFormation" Version="3.7.9.13" />
+      <PackageReference Include="AWSSDK.EC2" Version="3.7.60.6" />
+      <PackageReference Include="AWSSDK.ECR" Version="3.7.3.4" />
+      <PackageReference Include="AWSSDK.ECS" Version="3.7.5.3" />
+      <PackageReference Include="AWSSDK.IdentityManagement" Version="3.7.2.116" />
+      <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.1.128" />
+      <PackageReference Include="CliWrap" Version="3.4.1" />
+      <PackageReference Include="Docker.DotNet" Version="3.125.5" />
+      <PackageReference Include="Ductus.FluentDocker" Version="2.10.45" />
+      <PackageReference Include="Spectre.Console" Version="0.43.0" />
+    </ItemGroup>
+
+</Project>

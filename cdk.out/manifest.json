@@ -1,0 +1,382 @@
+{
+  "version": "16.0.0",
+  "artifacts": {
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    },
+    "fissaaStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://182476924183/us-east-1",
+      "properties": {
+        "templateFile": "fissaaStack.template.json",
+        "validateOnSynth": false
+      },
+      "metadata": {
+        "/fissaaStack/TestVpc/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TestVpcE77CE678",
+            "trace": [
+              "new Vpc (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:399:25)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/TestVpc/public-subnet-1Subnet1/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TestVpcpublicsubnet1Subnet1SubnetC8F21E84",
+            "trace": [
+              "new Subnet (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:731:24)",
+              "new PublicSubnet (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:891:9)",
+              "/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:641:42",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:615:32)",
+              "Vpc.createSubnets (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:606:18)",
+              "new Vpc (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:425:14)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/TestVpc/public-subnet-1Subnet1/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TestVpcpublicsubnet1Subnet1RouteTable8281964F",
+            "trace": [
+              "new Subnet (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:747:23)",
+              "new PublicSubnet (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:891:9)",
+              "/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:641:42",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:615:32)",
+              "Vpc.createSubnets (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:606:18)",
+              "new Vpc (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:425:14)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/TestVpc/public-subnet-1Subnet1/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TestVpcpublicsubnet1Subnet1RouteTableAssociation513FC19C",
+            "trace": [
+              "new Subnet (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:752:9)",
+              "new PublicSubnet (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:891:9)",
+              "/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:641:42",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:615:32)",
+              "Vpc.createSubnets (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:606:18)",
+              "new Vpc (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:425:14)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/TestVpc/public-subnet-1Subnet1/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TestVpcpublicsubnet1Subnet1DefaultRouteAEE858EA",
+            "trace": [
+              "PublicSubnet.addDefaultInternetRoute (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:780:23)",
+              "/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:437:30",
+              "Array.forEach (<anonymous>)",
+              "new Vpc (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:436:32)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/TestVpc/public-subnet-1Subnet1/EIP": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TestVpcpublicsubnet1Subnet1EIP5A3123F8",
+            "trace": [
+              "PublicSubnet.addNatGateway (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:907:102)",
+              "NatGatewayProvider.configureNat (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/nat.js:91:33)",
+              "Vpc.createNatGateways (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:589:18)",
+              "new Vpc (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:442:22)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/TestVpc/public-subnet-1Subnet1/NATGateway": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TestVpcpublicsubnet1Subnet1NATGateway1906345F",
+            "trace": [
+              "PublicSubnet.addNatGateway (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:905:21)",
+              "NatGatewayProvider.configureNat (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/nat.js:91:33)",
+              "Vpc.createNatGateways (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:589:18)",
+              "new Vpc (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:442:22)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/TestVpc/IGW": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TestVpcIGW9DD53F70",
+            "trace": [
+              "new Vpc (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:429:25)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/TestVpc/VPCGW": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TestVpcVPCGWF1827B84",
+            "trace": [
+              "new Vpc (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:432:25)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/MyCluster/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MyCluster4C1BA579",
+            "trace": [
+              "new Cluster (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/cluster.js:79:25)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/EcrRepo/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EcrRepoBB83A592",
+            "trace": [
+              "new Repository (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecr/lib/repository.js:186:26)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/FargateTaskDef/TaskRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "FargateTaskDefTaskRole0B257552",
+            "trace": [
+              "new Role (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-iam/lib/role.js:50:22)",
+              "new TaskDefinition (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/base/task-definition.js:90:43)",
+              "new FargateTaskDefinition (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/fargate/fargate-task-definition.js:20:9)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/FargateTaskDef/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "FargateTaskDefC6FB60B4",
+            "trace": [
+              "new TaskDefinition (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/base/task-definition.js:104:25)",
+              "new FargateTaskDefinition (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/fargate/fargate-task-definition.js:20:9)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/FargateTaskDef/ExecutionRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "FargateTaskDefExecutionRole272677A9",
+            "trace": [
+              "new Role (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-iam/lib/role.js:50:22)",
+              "FargateTaskDefinition.obtainExecutionRole (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/base/task-definition.js:322:35)",
+              "EcrImage.bind (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/images/ecr.js:28:70)",
+              "new ContainerDefinition (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/container-definition.js:118:40)",
+              "FargateTaskDefinition.addContainer (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/base/task-definition.js:254:16)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8228:134",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8228:107",
+              "Kernel._ensureSync (/tmp/pumu4x2l.gy3/lib/program.js:8821:28)",
+              "Kernel.invoke (/tmp/pumu4x2l.gy3/lib/program.js:8228:34)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/FargateTaskDef/ExecutionRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "FargateTaskDefExecutionRoleDefaultPolicy6D29E918",
+            "trace": [
+              "new Policy (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-iam/lib/policy.js:50:26)",
+              "Role.addToPrincipalPolicy (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-iam/lib/role.js:199:34)",
+              "Function.addToPrincipal (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-iam/lib/grant.js:87:65)",
+              "Function.addToPrincipalOrResource (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-iam/lib/grant.js:43:30)",
+              "Repository.grant (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecr/lib/repository.js:143:26)",
+              "Repository.grantPull (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecr/lib/repository.js:155:26)",
+              "EcrImage.bind (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/images/ecr.js:28:25)",
+              "new ContainerDefinition (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/container-definition.js:118:40)",
+              "FargateTaskDefinition.addContainer (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/base/task-definition.js:254:16)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8228:134",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8228:107",
+              "Kernel._ensureSync (/tmp/pumu4x2l.gy3/lib/program.js:8821:28)",
+              "Kernel.invoke (/tmp/pumu4x2l.gy3/lib/program.js:8228:34)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/MyFargateService/Service": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MyFargateService8825BC17",
+            "trace": [
+              "new BaseService (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/base/base-service.js:129:25)",
+              "new FargateService (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/fargate/fargate-service.js:34:9)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/MyFargateService/SecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MyFargateServiceSecurityGroup0E9E24D5",
+            "trace": [
+              "new SecurityGroup (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ec2/lib/security-group.js:194:30)",
+              "FargateService.configureAwsVpcNetworkingWithSecurityGroups (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/base/base-service.js:545:31)",
+              "new FargateService (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/aws-ecs/lib/fargate/fargate-service.js:52:14)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8412:58",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "Kernel._create (/tmp/pumu4x2l.gy3/lib/program.js:8412:34)",
+              "Kernel.create (/tmp/pumu4x2l.gy3/lib/program.js:8153:29)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ],
+        "/fissaaStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata",
+            "trace": [
+              "new MetadataResource (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/core/lib/private/metadata-resource.js:22:30)",
+              "/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/core/lib/private/synthesis.js:139:9",
+              "visit (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/core/lib/private/synthesis.js:200:9)",
+              "visit (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/core/lib/private/synthesis.js:197:9)",
+              "injectMetadataResources (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/core/lib/private/synthesis.js:128:5)",
+              "Object.synthesize (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/core/lib/private/synthesis.js:17:5)",
+              "App.synth (/tmp/jsii-kernel-sNsx2J/node_modules/@aws-cdk/core/lib/stage.js:89:41)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8228:134",
+              "Kernel._wrapSandboxCode (/tmp/pumu4x2l.gy3/lib/program.js:8840:24)",
+              "/tmp/pumu4x2l.gy3/lib/program.js:8228:107",
+              "Kernel._ensureSync (/tmp/pumu4x2l.gy3/lib/program.js:8821:28)",
+              "Kernel.invoke (/tmp/pumu4x2l.gy3/lib/program.js:8228:34)",
+              "KernelHost.processRequest (/tmp/pumu4x2l.gy3/lib/program.js:9761:36)",
+              "KernelHost.run (/tmp/pumu4x2l.gy3/lib/program.js:9724:22)",
+              "Immediate._onImmediate (/tmp/pumu4x2l.gy3/lib/program.js:9725:46)",
+              "processImmediate (internal/timers.js:464:21)"
+            ]
+          }
+        ]
+      },
+      "displayName": "fissaaStack"
+    }
+  }
+}

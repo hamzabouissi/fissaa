@@ -1,0 +1,416 @@
+{
+  "Resources": {
+    "TestVpcE77CE678": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/16",
+        "EnableDnsHostnames": true,
+        "EnableDnsSupport": true,
+        "InstanceTenancy": "default",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "fissaaStack/TestVpc"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/TestVpc/Resource"
+      }
+    },
+    "TestVpcpublicsubnet1Subnet1SubnetC8F21E84": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/24",
+        "VpcId": {
+          "Ref": "TestVpcE77CE678"
+        },
+        "AvailabilityZone": "us-east-1a",
+        "MapPublicIpOnLaunch": true,
+        "Tags": [
+          {
+            "Key": "aws-cdk:subnet-name",
+            "Value": "public-subnet-1"
+          },
+          {
+            "Key": "aws-cdk:subnet-type",
+            "Value": "Public"
+          },
+          {
+            "Key": "Name",
+            "Value": "fissaaStack/TestVpc/public-subnet-1Subnet1"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/TestVpc/public-subnet-1Subnet1/Subnet"
+      }
+    },
+    "TestVpcpublicsubnet1Subnet1RouteTable8281964F": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "TestVpcE77CE678"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "fissaaStack/TestVpc/public-subnet-1Subnet1"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/TestVpc/public-subnet-1Subnet1/RouteTable"
+      }
+    },
+    "TestVpcpublicsubnet1Subnet1RouteTableAssociation513FC19C": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "TestVpcpublicsubnet1Subnet1RouteTable8281964F"
+        },
+        "SubnetId": {
+          "Ref": "TestVpcpublicsubnet1Subnet1SubnetC8F21E84"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/TestVpc/public-subnet-1Subnet1/RouteTableAssociation"
+      }
+    },
+    "TestVpcpublicsubnet1Subnet1DefaultRouteAEE858EA": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "TestVpcpublicsubnet1Subnet1RouteTable8281964F"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "TestVpcIGW9DD53F70"
+        }
+      },
+      "DependsOn": [
+        "TestVpcVPCGWF1827B84"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/TestVpc/public-subnet-1Subnet1/DefaultRoute"
+      }
+    },
+    "TestVpcpublicsubnet1Subnet1EIP5A3123F8": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "fissaaStack/TestVpc/public-subnet-1Subnet1"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/TestVpc/public-subnet-1Subnet1/EIP"
+      }
+    },
+    "TestVpcpublicsubnet1Subnet1NATGateway1906345F": {
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "TestVpcpublicsubnet1Subnet1SubnetC8F21E84"
+        },
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "TestVpcpublicsubnet1Subnet1EIP5A3123F8",
+            "AllocationId"
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "fissaaStack/TestVpc/public-subnet-1Subnet1"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/TestVpc/public-subnet-1Subnet1/NATGateway"
+      }
+    },
+    "TestVpcIGW9DD53F70": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "fissaaStack/TestVpc"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/TestVpc/IGW"
+      }
+    },
+    "TestVpcVPCGWF1827B84": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "TestVpcE77CE678"
+        },
+        "InternetGatewayId": {
+          "Ref": "TestVpcIGW9DD53F70"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/TestVpc/VPCGW"
+      }
+    },
+    "MyCluster4C1BA579": {
+      "Type": "AWS::ECS::Cluster",
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/MyCluster/Resource"
+      }
+    },
+    "EcrRepoBB83A592": {
+      "Type": "AWS::ECR::Repository",
+      "Properties": {
+        "RepositoryName": "integration-ratehawk"
+      },
+      "UpdateReplacePolicy": "Retain",
+      "DeletionPolicy": "Retain",
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/EcrRepo/Resource"
+      }
+    },
+    "FargateTaskDefTaskRole0B257552": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/FargateTaskDef/TaskRole/Resource"
+      }
+    },
+    "FargateTaskDefC6FB60B4": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "ContainerDefinitions": [
+          {
+            "Essential": true,
+            "Image": {
+              "Fn::Join": [
+                "",
+                [
+                  {
+                    "Fn::Select": [
+                      4,
+                      {
+                        "Fn::Split": [
+                          ":",
+                          {
+                            "Fn::GetAtt": [
+                              "EcrRepoBB83A592",
+                              "Arn"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  ".dkr.ecr.",
+                  {
+                    "Fn::Select": [
+                      3,
+                      {
+                        "Fn::Split": [
+                          ":",
+                          {
+                            "Fn::GetAtt": [
+                              "EcrRepoBB83A592",
+                              "Arn"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  ".",
+                  {
+                    "Ref": "AWS::URLSuffix"
+                  },
+                  "/",
+                  {
+                    "Ref": "EcrRepoBB83A592"
+                  },
+                  ":eb846d4e32a6ffe2080afd53908953462bf9e971"
+                ]
+              ]
+            },
+            "Name": "Container",
+            "PortMappings": [
+              {
+                "ContainerPort": 80,
+                "HostPort": 80,
+                "Protocol": "tcp"
+              }
+            ]
+          }
+        ],
+        "Cpu": "256",
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": [
+            "FargateTaskDefExecutionRole272677A9",
+            "Arn"
+          ]
+        },
+        "Family": "fissaaStackFargateTaskDefFD62A0C9",
+        "Memory": "512",
+        "NetworkMode": "awsvpc",
+        "RequiresCompatibilities": [
+          "FARGATE"
+        ],
+        "TaskRoleArn": {
+          "Fn::GetAtt": [
+            "FargateTaskDefTaskRole0B257552",
+            "Arn"
+          ]
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/FargateTaskDef/Resource"
+      }
+    },
+    "FargateTaskDefExecutionRole272677A9": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/FargateTaskDef/ExecutionRole/Resource"
+      }
+    },
+    "FargateTaskDefExecutionRoleDefaultPolicy6D29E918": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchGetImage"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "EcrRepoBB83A592",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Action": "ecr:GetAuthorizationToken",
+              "Effect": "Allow",
+              "Resource": "*"
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "FargateTaskDefExecutionRoleDefaultPolicy6D29E918",
+        "Roles": [
+          {
+            "Ref": "FargateTaskDefExecutionRole272677A9"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/FargateTaskDef/ExecutionRole/DefaultPolicy/Resource"
+      }
+    },
+    "MyFargateService8825BC17": {
+      "Type": "AWS::ECS::Service",
+      "Properties": {
+        "Cluster": {
+          "Ref": "MyCluster4C1BA579"
+        },
+        "DeploymentConfiguration": {
+          "MaximumPercent": 200,
+          "MinimumHealthyPercent": 50
+        },
+        "DesiredCount": 1,
+        "EnableECSManagedTags": false,
+        "LaunchType": "FARGATE",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "AssignPublicIp": "ENABLED",
+            "SecurityGroups": [
+              {
+                "Fn::GetAtt": [
+                  "MyFargateServiceSecurityGroup0E9E24D5",
+                  "GroupId"
+                ]
+              }
+            ],
+            "Subnets": [
+              {
+                "Ref": "TestVpcpublicsubnet1Subnet1SubnetC8F21E84"
+              }
+            ]
+          }
+        },
+        "TaskDefinition": {
+          "Ref": "FargateTaskDefC6FB60B4"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/MyFargateService/Service"
+      }
+    },
+    "MyFargateServiceSecurityGroup0E9E24D5": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "fissaaStack/MyFargateService/SecurityGroup",
+        "SecurityGroupEgress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow all outbound traffic by default",
+            "IpProtocol": "-1"
+          }
+        ],
+        "VpcId": {
+          "Ref": "TestVpcE77CE678"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/MyFargateService/SecurityGroup/Resource"
+      }
+    },
+    "CDKMetadata": {
+      "Type": "AWS::CDK::Metadata",
+      "Properties": {
+        "Analytics": "v2:deflate64:H4sIAAAAAAAA/11RwW7CMAz9Fu4hpWyadpk0VBjiUlUt4h4ys3lAXCUOqKr670taOtCUg5/fs+MXJ5Xp86ucTd7V1U315zFpNVmQbcVKH0UJjrzVIDIyjq3XLLKDGdlOxKYW9Fy2u1pHaVdkovD7E+rK7w305XdUkmfYqv0J7vydWzhHGhUjmb/iCFabIoZc8VoxXFUTs41hsKH9gQqzb9mCg/vvMxgWFWhvkZu1JV/3Ux+JToB2ss1O3oXrojzCD2W/VDTmjks4oMHR1n+GDCs0YB+4W28F9oJ6eOoA4zgr2xJqcshkm2GbY9YJVOcg07CfPhYUdtnXDajrOrEkzoGTFzmT80Tmq20WvmxR19MdWBcMvF2eZJqkQQ5n8uMQp9YbxjPIcoi/iuB6B/YBAAA="
+      },
+      "Metadata": {
+        "aws:cdk:path": "fissaaStack/CDKMetadata/Default"
+      }
+    }
+  }
+}

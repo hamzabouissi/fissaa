@@ -1,0 +1,3 @@
+{
+ "app": "dotnet run -p fissaa/fissaa.csproj"
+}
