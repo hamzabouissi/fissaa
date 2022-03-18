@@ -1,6 +1,9 @@
 using System.Collections.Specialized;
 using System.Net;
 using System.Text.Json;
+using Amazon.CDK.AWS.EC2;
+using Amazon.CloudFormation;
+using Amazon.CloudFormation.Model;
 using Amazon.EC2;
 using Amazon.EC2.Model;
 using Amazon.ECR;
@@ -14,7 +17,9 @@ using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
 using CliWrap;
 using CliWrap.Buffered;
-
+using Docker.DotNet.Models;
+using fissaa.commands.infrastructure;
+using Flurl.Http;
 using ResourceType = Amazon.EC2.ResourceType;
 using Tag = Amazon.EC2.Model.Tag;
 using Task = System.Threading.Tasks.Task;
@@ -30,11 +35,18 @@ public class SimpleStack
     private AmazonECSClient ClientEcs { get;}
     private AmazonECRClient ClientEcr { get; }
     public AmazonSecurityTokenServiceClient StsClient { get; set; }
+    public AmazonCloudFormationClient ClientCformation { get; set; }
+
 
     private AmazonIdentityManagementServiceClient ClientIam { get; }
 
     private IDictionary<string, string> _resources = new Dictionary<string, string>();
     private string ProjectName { get; set; }
+
+    public string ServiceStackName => $"{ProjectName}-Service-Stack";
+    public string MainStackName => $"{ProjectName}-Main-Stack";
+    public string ServiceName => $"{ProjectName}-Service";
+    public string ClusterName => $"{ProjectName}-Cluster";
     
     public SimpleStack(string awsSecretKey,string awsAccessKey, string projectName)
     {
@@ -45,11 +57,13 @@ public class SimpleStack
         ClientEcs = new AmazonECSClient(credentials:auth);
         ClientEcr = new AmazonECRClient(credentials:auth);
         ClientIam = new AmazonIdentityManagementServiceClient();
-        StsClient = new AmazonSecurityTokenServiceClient(auth);  
-       
-       
+        StsClient = new AmazonSecurityTokenServiceClient(auth);
+        ClientCformation = new AmazonCloudFormationClient();
+
+
 
     }
+
 
     public async Task<string> GetAccountId()
     {
@@ -80,9 +94,14 @@ public class SimpleStack
             }
         };
     }
+    
+    private async Task<string> ExtractTextFromRemoteFile(string url)
+    {
+        var text = await url.GetStringAsync();
+        return text;
+    }
 
     #endregion
-    
 
     #region ResourceFileFunctions
 
@@ -565,16 +584,16 @@ public class SimpleStack
         _resources = ReadResourceFile();
         _resources.TryGetValue("serviceName", out var serviceName);
 
-        // var (image,registry) = await BuildImage(dockerfile);
-        // var password = await DecodeRegistryLoginTokenToPassword();
-        // await LoginToRegistry(password,registry);
-        // await DeployImageToEcr(image);
-        //
-        // var taskDefinition = await RegisterTaskDefinition(image, $"{ProjectName}-Container");
-        // if (serviceName is null)
-        //     await CreateService(_resources["clusterName"], _resources["securityGroupId"],_resources["subnetId"],taskDefinition.TaskDefinition.TaskDefinitionArn);
-        // else
-        //     await UpdateService(_resources["clusterName"],serviceName, taskDefinition.TaskDefinition.TaskDefinitionArn);
+        var (image,registry) = await BuildImage(dockerfile);
+        var password = await DecodeRegistryLoginTokenToPassword();
+        await LoginToRegistry(password,registry);
+        await DeployImageToEcr(image);
+        
+        var taskDefinition = await RegisterTaskDefinition(image, $"{ProjectName}-Container");
+        if (serviceName is null)
+            await CreateService(_resources["clusterName"], _resources["securityGroupId"],_resources["subnetId"],taskDefinition.TaskDefinition.TaskDefinitionArn);
+        else
+            await UpdateService(_resources["clusterName"],serviceName, taskDefinition.TaskDefinition.TaskDefinitionArn);
         
         var ip = await GetEcsServiceIp();
         Console.WriteLine(string.IsNullOrEmpty(ip) ? "couldn't find service ip" : $"Ip:{ip}");
@@ -728,6 +747,8 @@ public class SimpleStack
         if (serviceResponse.HttpStatusCode==HttpStatusCode.OK)
         {
             _resources.Add("serviceName",serviceName);
+            var taskSetArn = serviceResponse.Service.TaskSets.First().TaskSetArn;
+            _resources.Add("taskId",taskSetArn);
         }
         Console.WriteLine($"status: {serviceResponse.HttpStatusCode}");
         return serviceResponse;
@@ -735,7 +756,7 @@ public class SimpleStack
     private async Task<RegisterTaskDefinitionResponse> RegisterTaskDefinition(string image,string containerName)
     {
         Console.WriteLine("RegisterTaskDefinition....");
-        var taskDefinition = await ClientEcs.RegisterTaskDefinitionAsync(new RegisterTaskDefinitionRequest
+        var taskDefinitionResponse = await ClientEcs.RegisterTaskDefinitionAsync(new RegisterTaskDefinitionRequest
         {
             ContainerDefinitions = new List<ContainerDefinition>()
             {
@@ -775,8 +796,9 @@ public class SimpleStack
                 }
             }
         });
-        Console.WriteLine($"status: {taskDefinition.HttpStatusCode}");
-        return taskDefinition;
+        
+        Console.WriteLine($"status: {taskDefinitionResponse.HttpStatusCode}");
+        return taskDefinitionResponse;
     }
     private async Task UpdateService(string cluster,string serviceName,string taskDefinitionArn)
     {
@@ -790,4 +812,238 @@ public class SimpleStack
         Console.WriteLine($"status: {updateServiceResponse.HttpStatusCode}");
     }
     #endregion
+
+
+    #region Cloudformation
+
+    public async Task CloudformationInit(bool createDockerfile, string projectType)
+    {
+    
+        if (createDockerfile)
+            await CreateDockerfile(projectType);
+        var cloudFile = await ExtractTextFromRemoteFile("https://gist.githubusercontent.com/hamzabouissi/cfaa124891cfdc8d5e49f285ce24b997/raw/58f75fce22a51a4877912a278965bfc2b983ea08/base_infrastructure.json");
+        var parameters = new List<Parameter>()
+        {
+            new Parameter
+            {
+                ParameterKey = "ProjectName",
+                ParameterValue = ProjectName,
+
+            }
+        };
+        
+        try
+        {
+            
+            var response = await ClientCformation.CreateStackAsync(new CreateStackRequest
+            {
+                DisableRollback = false,
+                EnableTerminationProtection = false,
+                NotificationARNs = null,
+                Parameters = parameters,
+                ResourceTypes = null,
+                StackName = MainStackName,
+                TemplateBody = cloudFile,
+                TimeoutInMinutes = 5
+            });
+        }
+        catch (AlreadyExistsException)
+        {
+            Console.WriteLine("Update stack...");
+            await ClientCformation.UpdateStackAsync(new UpdateStackRequest
+            {
+            
+                DisableRollback = false,
+                StackName = MainStackName,
+                UsePreviousTemplate = true
+            });
+        }
+        await DisplayResourcesStatus(MainStackName);
+    }
+
+    private async Task<StackStatus> GetStackStatus(string stackName)
+    {
+        var stacksResponse =await ClientCformation.DescribeStacksAsync(new DescribeStacksRequest
+        {
+            StackName = stackName
+        });
+        var stackStatus = stacksResponse.Stacks.First().StackStatus;
+        return stackStatus;
+    }
+    private async Task DisplayResourcesStatus(string stackName)
+    {
+        var endStatus = new List<StackStatus>()
+        {
+            StackStatus.ROLLBACK_IN_PROGRESS,
+            StackStatus.CREATE_IN_PROGRESS,
+            StackStatus.DELETE_IN_PROGRESS,
+            StackStatus.UPDATE_IN_PROGRESS,
+        };
+        var stackStatus = await GetStackStatus(stackName); 
+        Console.WriteLine($"Stack Status: {stackStatus}");
+        Console.WriteLine("====>");
+        while(endStatus.Exists(e=>e==stackStatus))
+        {
+            var eventsResponse = await ClientCformation.DescribeStackResourcesAsync(new DescribeStackResourcesRequest()
+            {
+                StackName = stackName
+            });
+            foreach (var resource in eventsResponse.StackResources)
+                Console.WriteLine($"{resource.ResourceType}, status = {resource.ResourceStatus}");
+
+            Thread.Sleep(5);
+            stackStatus = await GetStackStatus(stackName); 
+            Console.WriteLine($"Stack Status: {stackStatus}");
+            Console.WriteLine("====>");
+            
+        }
+    }
+
+
+    private async Task<DeleteStackResponse> DeleteStack(string stackName)
+    {
+        
+        var deleteServiceStackResponse = await ClientCformation.DeleteStackAsync(new DeleteStackRequest
+        {
+            StackName = stackName
+        });
+        return deleteServiceStackResponse;
+    }
+    public async Task CloudformationDestroy()
+    {
+        Console.WriteLine("Delete Service");
+        try
+        {
+            var response = await ClientEcs.DeleteServiceAsync(new DeleteServiceRequest
+            {
+                Cluster = ClusterName,
+                Force = true,
+                Service = ServiceName
+            });
+            Console.WriteLine($"status: {response.HttpStatusCode}");
+            
+        }
+        catch (ServiceNotFoundException e)
+        {
+            Console.WriteLine("Service Not Found on Ecs...");
+        }
+        
+        try
+        {
+            Console.WriteLine("Delete Service Stack");
+            var deleteServiceStackResponse = await DeleteStack(ServiceStackName);
+            Console.WriteLine($"status: {deleteServiceStackResponse.HttpStatusCode}");
+        }
+        catch (StackNotFoundException )
+        {
+            Console.WriteLine("No Service Stack....");
+        }
+        
+        
+        Console.WriteLine("Delete Main Stack");
+        var stackDeleteResponse = await DeleteStack(MainStackName);
+        Console.WriteLine($"status: {stackDeleteResponse.HttpStatusCode}");
+        await DisplayResourcesStatus(MainStackName);
+       
+    }
+    public async Task CloudformationDeploy(string dockerfile)
+    {
+        
+        var (image,registry) = await BuildImage(dockerfile);
+        var password = await DecodeRegistryLoginTokenToPassword();
+        await LoginToRegistry(password,registry);
+        await DeployImageToEcr(image);
+        
+        var taskDefinition = await RegisterTaskDefinition(image, $"{ProjectName}-Container");
+        var eventsResponse = await ClientCformation.DescribeStackResourcesAsync(new DescribeStackResourcesRequest()
+        {
+            StackName = MainStackName
+        });
+        var subnetId = eventsResponse.StackResources.First(p => p.ResourceType == "AWS::EC2::Subnet").PhysicalResourceId;
+        var securityGroupId = eventsResponse.StackResources.First(p => p.ResourceType == "AWS::EC2::SecurityGroup").PhysicalResourceId;
+        var cloudFile = await ExtractTextFromRemoteFile("https://gist.githubusercontent.com/hamzabouissi/cfaa124891cfdc8d5e49f285ce24b997/raw/b812183e94f3379f4fa048f3c7c93d137234b68f/ecs-service.json");
+
+        var parameters = new List<Parameter>()
+        {
+            new Parameter
+            {
+                ParameterKey = "SubnetId",
+                ParameterValue = subnetId,
+
+            },
+            new Parameter
+            {
+                ParameterKey = "SecurityGroupId",
+                ParameterValue = securityGroupId,
+
+            },
+            new Parameter
+            {
+                ParameterKey = "ProjectName",
+                ParameterValue = ProjectName,
+
+            },
+            new Parameter()
+            {
+                ParameterKey = "ServiceName",
+                ParameterValue = ServiceName,
+            },
+            new Parameter()
+            {
+                ParameterKey = "TaskDefinition",
+                ParameterValue = taskDefinition.TaskDefinition.TaskDefinitionArn,
+            }
+        };
+        try
+        {
+            var response = await ClientCformation.CreateStackAsync(new CreateStackRequest
+            {
+                DisableRollback = false,
+                Parameters =parameters,
+                StackName = ServiceStackName,
+                TemplateBody = cloudFile,
+                TimeoutInMinutes = 5
+            });
+        }
+        catch (AlreadyExistsException )
+        {
+            Console.WriteLine($"updating service stack {ServiceStackName}");
+            var response = await ClientCformation.UpdateStackAsync(new UpdateStackRequest
+            {
+
+                Parameters = parameters,
+                StackName = ServiceStackName,
+                UsePreviousTemplate = true,
+            });
+        }
+        await DisplayResourcesStatus(ServiceStackName);
+        var stackStatus = await GetStackStatus(MainStackName);
+        if (stackStatus == StackStatus.CREATE_COMPLETE)
+        {
+            _resources.Add("ServiceStack",ServiceStackName);
+            CreateResourceFile();
+        }
+    }
+    private async Task CreateDockerfile(string projectType)
+    {
+        var url = "https://gist.githubusercontent.com/hamzabouissi/abc0a0bffe61df2c51cc03ed47a6f1ab/raw/a22072086ca54387216eab3c315b05bab9deeeb6";
+        switch (projectType)
+        {
+            case "Fastapi":
+                url = $"{url}/fastapi-dockerfile";
+                break;
+            case "NodeJs":
+                url = $"{url}/nodejs-dockerfile";
+                break;
+            case "AspNetCore":
+                break;
+        }
+        var dockerfileContent = await url.GetStringAsync();
+        await File.WriteAllTextAsync("Dockerfile",dockerfileContent);
+    }
+
+    #endregion
+
+
+   
 }

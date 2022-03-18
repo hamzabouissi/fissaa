@@ -22,6 +22,7 @@
       <PackageReference Include="CliWrap" Version="3.4.1" />
       <PackageReference Include="Docker.DotNet" Version="3.125.5" />
       <PackageReference Include="Ductus.FluentDocker" Version="2.10.45" />
+      <PackageReference Include="Flurl.Http" Version="3.2.2" />
       <PackageReference Include="Spectre.Console" Version="0.43.0" />
     </ItemGroup>
 

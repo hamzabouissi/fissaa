@@ -31,13 +31,42 @@ public class InfrastructureSettings : CommandSettings
     
     [CommandArgument(1,"<aws-access-key>")]
     public string AwsAcessKey { get; set; }
+    
 
 }
 
 
 public sealed class InfrastructureInitCommandSettings : InfrastructureSettings
 {
-       
+    [CommandOption("--create-dockerfile")]
+    [DefaultValue(false)]
+    public bool CreateDockerfile { get; set; } = false;
+
+    [CommandOption("--project-type")] public string? ProjectType { get; set; } = null;
+    
+    public override ValidationResult Validate()
+    {
+        return string.IsNullOrEmpty(ProjectType) || ProjectTypeChoices.Exists(p => p == ProjectType)
+            ? ValidationResult.Success()
+            : ValidationResult.Error("--project-type choice is wrong");
+    }
+    public readonly List<string> ProjectTypeChoices=new () {
+        "Fastapi", "AspNetCore", "NodeJs", 
+    };
+    public InfrastructureInitCommandSettings(bool createDockerfile,string projectType)
+    {
+        CreateDockerfile = createDockerfile;
+        if (createDockerfile && string.IsNullOrEmpty(projectType))
+        {
+            ProjectType = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("What's your Framework ?")
+                    .AddChoices(ProjectTypeChoices));
+        }
+        else
+            ProjectType = projectType;
+    
+    }
 }
 
 public sealed class InfrastructureDestroyCommandSettings : InfrastructureSettings
@@ -46,10 +75,13 @@ public sealed class InfrastructureDestroyCommandSettings : InfrastructureSetting
 }
 
 
+
+
 public sealed class InfrastructureDeployCommandSettings : InfrastructureSettings
 {
     [CommandOption("--dockerfile-path")]
     [DefaultValue("./")]
     public string DockerfilePath { get; set; }
-       
+   
+
 }
