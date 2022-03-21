@@ -1,7 +1,5 @@
-using System.Collections.Specialized;
-using System.Net;
-using System.Text.Json;
-using Amazon.CDK.AWS.EC2;
+
+using Amazon;
 using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
 using Amazon.EC2;
@@ -11,14 +9,11 @@ using Amazon.ECR.Model;
 using Amazon.ECS.Model;
 using Amazon.ECS;
 using Amazon.IdentityManagement;
-using Amazon.IdentityManagement.Model;
 using Amazon.Runtime;
 using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
 using CliWrap;
 using CliWrap.Buffered;
-using Docker.DotNet.Models;
-using fissaa.commands.infrastructure;
 using Flurl.Http;
 using ResourceType = Amazon.EC2.ResourceType;
 using Tag = Amazon.EC2.Model.Tag;
@@ -30,7 +25,6 @@ namespace fissaa;
 
 public class SimpleStack
 {
-    private List<TagSpecification>? _tagSpecifications = null;
     private AmazonEC2Client ClientEc2 { get; }
     private AmazonECSClient ClientEcs { get;}
     private AmazonECRClient ClientEcr { get; }
@@ -40,30 +34,32 @@ public class SimpleStack
 
     private AmazonIdentityManagementServiceClient ClientIam { get; }
 
-    private IDictionary<string, string> _resources = new Dictionary<string, string>();
     private string ProjectName { get; set; }
 
     public string ServiceStackName => $"{ProjectName}-Service-Stack";
     public string MainStackName => $"{ProjectName}-Main-Stack";
     public string ServiceName => $"{ProjectName}-Service";
     public string ClusterName => $"{ProjectName}-Cluster";
-    
+    public string RepoName => ProjectName;
+    public RegionEndpoint Region { get; set; } = RegionEndpoint.USEast1;
     public SimpleStack(string awsSecretKey,string awsAccessKey, string projectName)
     {
 
         ProjectName = projectName;
         var auth = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
-        ClientEc2 = new AmazonEC2Client(credentials:auth);
-        ClientEcs = new AmazonECSClient(credentials:auth);
-        ClientEcr = new AmazonECRClient(credentials:auth);
-        ClientIam = new AmazonIdentityManagementServiceClient();
-        StsClient = new AmazonSecurityTokenServiceClient(auth);
-        ClientCformation = new AmazonCloudFormationClient();
+        
+        ClientEc2 = new AmazonEC2Client(credentials:auth,Region);
+        ClientEcs = new AmazonECSClient(credentials:auth,Region);
+        ClientEcr = new AmazonECRClient(credentials:auth,Region);
+        ClientIam = new AmazonIdentityManagementServiceClient(auth,Region);
+        StsClient = new AmazonSecurityTokenServiceClient(auth,Region);
+        ClientCformation = new AmazonCloudFormationClient(auth,Region);
 
 
 
     }
 
+    #region UtilFunction
 
     public async Task<string> GetAccountId()
     {
@@ -72,7 +68,6 @@ public class SimpleStack
         return accountId;
     }
 
-    #region UtilFunctions
 
     public string GetRegistry(string accountId,string region="us-east-1")=>$"{accountId}.dkr.ecr.{region}.amazonaws.com";
     private List<TagSpecification> CreateTag(ResourceType resourceType)
@@ -94,7 +89,6 @@ public class SimpleStack
             }
         };
     }
-    
     private async Task<string> ExtractTextFromRemoteFile(string url)
     {
         var text = await url.GetStringAsync();
@@ -103,533 +97,27 @@ public class SimpleStack
 
     #endregion
 
-    #region ResourceFileFunctions
-
-    public void CreateResourceFile()
-    {
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        var jsonString = JsonSerializer.Serialize(_resources, options);
-        File.WriteAllText("infrastructure.json", jsonString);
-    }
-    public Dictionary<string, string> ReadResourceFile()
-    {
-        var fileName = "infrastructure.json";
-        try
-        {
-            var jsonString = File.ReadAllText(fileName);
-            return JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString)!;
-
-        }
-        catch (FileNotFoundException exception)
-        {
-            throw new FileLoadException("infrastructure.json file not exist, you need to run init command first");
-        }
-        
-        
-    }
-    
-    private void RemoveResourceFile()
-    {
-        Console.WriteLine("Deleting Resources file");
-        var fileName = "infrastructure.json";
-        File.Delete(fileName);
-    }
-
-    #endregion
-
-    #region DestroyFunctions
-
-    public async Task Destroy()
-    {
-        Console.WriteLine("Destroying....");
-        _resources = ReadResourceFile();
-        await DeleteService();
-        await DestroyCluster();
-        await DestroyRoute();
-        await DestroyRouteTable();
-        Thread.Sleep(3); // this for waiting aws to delete
-        await DestroySecurityGroup();
-        await DestroySubnet();
-        await DestroyGateway();
-        await DestroyVpc();
-        await DestroyIamRole();
-        await DestroyEcr();
-        RemoveResourceFile();
-        Console.WriteLine("Ended...");
-    }
-
-    private async Task DeleteService()
-    {
-        Console.WriteLine("DeleteService started ");
-        _resources.TryGetValue("serviceName", out var id);
-        if (id is null)
-            return;
-        
-        _resources.TryGetValue("clusterName", out var clusterName);
-        if (clusterName is null)
-            return;
-        await ClientEcs.DeleteServiceAsync(new DeleteServiceRequest
-        {
-            Cluster = clusterName,
-            Force = true,
-            Service = id
-        });
-    }
-
-    private async Task DestroyRoute()
-    {
-        Console.WriteLine("DestroyRoute started ");
-        _resources.TryGetValue("routeTableId", out var id);
-        if (id is null)
-            return;
-        await ClientEc2.DeleteRouteAsync(new DeleteRouteRequest
-        {
-            DestinationCidrBlock = "0.0.0.0/0",
-            RouteTableId = id,
-
-        });
-    }
-
-    private async Task DestroyIamRole()
-    {
-        Console.WriteLine("DestroyIamRole started");
-        _resources.TryGetValue("roleName", out var id);
-        if (id is null)
-            return;
-        
-        _resources.TryGetValue("policyArn", out var policyArn);
-        if (policyArn is null)
-            return;
-        await ClientIam.DetachRolePolicyAsync(new DetachRolePolicyRequest
-        {
-            PolicyArn = policyArn,
-            RoleName = id
-        });
-        await ClientIam.DeleteRoleAsync(new DeleteRoleRequest
-        {
-            RoleName = id
-        });
-    }
-
-    private async Task DestroyCluster()
-    {
-        Console.WriteLine("DestroyCluster started");
-        _resources.TryGetValue("clusterName", out var id);
-        if (id is null)
-            return;
-        var response = await ClientEcs.DeleteClusterAsync(new DeleteClusterRequest
-        {
-            Cluster = id
-        });
-        Console.WriteLine($"status: {response.HttpStatusCode}");
-    }
 
 
-    private async Task DestroySecurityGroup()
-    {
-        _resources.TryGetValue("securityGroupId", out var id);
-        if (id is null)
-            return;
-        var response = await ClientEc2.DescribeSecurityGroupsAsync(new DescribeSecurityGroupsRequest
-        {
-            GroupIds = new List<string>(){id},
-        });
-        var securityGroup = response.SecurityGroups.FirstOrDefault();
-        if (securityGroup != null)
-        {
-           
-            var ipPermissions = securityGroup.IpPermissions;
-            if (ipPermissions.Count>0)
-            {
-                Console.WriteLine("RevokeSecurityGroupIngressAsync started ");
-                await ClientEc2.RevokeSecurityGroupIngressAsync(new RevokeSecurityGroupIngressRequest
-                {
-                    GroupId = id,
-                    IpPermissions = ipPermissions,
-                });
-            }
-        }
-       
-        await ClientEc2.DeleteSecurityGroupAsync(new DeleteSecurityGroupRequest
-        {
-            GroupId = id,
-        });
-    }
 
-    private async Task DestroySubnet()
-    {
-       
-        Console.WriteLine("DestroySubnet started ");
-        _resources.TryGetValue("subnetId", out var id);
-        if (id is null)
-            return;
-        await ClientEc2.DeleteSubnetAsync(new DeleteSubnetRequest
-        {
-            SubnetId = id
-        });
-    }
+    private async Task<string> GetTaskId(string taskDefinitionArn)
+   {
+       var response = await ClientEcs.ListTasksAsync(new ListTasksRequest
+       {
+           Cluster = ClusterName,
+           Family = null,
+           MaxResults = 1,
+           ServiceName = ServiceName,
+       });
 
-    private async Task DestroyRouteTable()
-    {
-        Console.WriteLine("DestroyRouteTable started ");
-        _resources.TryGetValue("routeTableId", out var id);
-        if (id is null)
-            return;
-        var associateIdsResponse =  await ClientEc2.DescribeRouteTablesAsync(new DescribeRouteTablesRequest
-        {
-
-            RouteTableIds = new List<string>() { id }
-        });
-        var ids = associateIdsResponse.RouteTables.First().Associations
-            .Where(ass=>!ass.Main)
-            .Select(ass => ass.RouteTableAssociationId);
-        foreach (var associateId in ids )
-        {
-            Console.WriteLine($"DisassociateRouteTable {associateId}");
-            await ClientEc2.DisassociateRouteTableAsync(new DisassociateRouteTableRequest
-            {
-                AssociationId = associateId
-            });
-        }
-        
-        await ClientEc2.DeleteRouteTableAsync(new DeleteRouteTableRequest()
-        {
-            RouteTableId = id
-        });
-    }
-
-    private async Task DestroyGateway()
-    {
-        Console.WriteLine("DestroyGateway started ");
-        _resources.TryGetValue("vpcId", out var vpcId);
-        if (vpcId is null)
-        {
-            Console.WriteLine($"{vpcId} not found");
-        }
-        _resources.TryGetValue("internetGatewayId", out var id);
-        if (id is null)
-            return;
-        var detachInternetGatewayResponse= await ClientEc2.DetachInternetGatewayAsync(new DetachInternetGatewayRequest
-        {
-            InternetGatewayId = id,
-            VpcId = vpcId
-        });
-        var response = await ClientEc2.DeleteInternetGatewayAsync(new DeleteInternetGatewayRequest
-        {
-            InternetGatewayId = id
-        });
-        Console.WriteLine(response.HttpStatusCode);
-    }
-
-    private async Task DestroyVpc()
-    {
-        Console.WriteLine("DestroyVpc started ");
-        _resources.TryGetValue("vpcId", out var vpcId);
-        if (vpcId is null)
-            return;
-        await ClientEc2.DeleteVpcAsync(new DeleteVpcRequest
-        {
-            VpcId = vpcId
-        });
-    }
-
-    private async Task DestroyEcr()
-    {
-        await ClientEcr.DeleteRepositoryAsync(new DeleteRepositoryRequest
-        {
-            RepositoryName =ProjectName
-        });
-    }
-
-    #endregion
-
-    #region InitlializationFunctions
-   
-    public async Task Init()
-    {
-        await CreateRole();
-        var vpcResponse = await CreateVpc();
-        var gatewayResponse = await CreateInternetGateway(vpcResponse.Vpc.VpcId);
-        var routeTableResponse  =  await CreateRouteTable(vpcResponse.Vpc.VpcId);
-        await CreateRoute(gatewayResponse.InternetGateway.InternetGatewayId,routeTableResponse.RouteTable.RouteTableId);
-        await CreateSubnet(vpcResponse.Vpc.VpcId,routeTableResponse.RouteTable.RouteTableId);
-        var securityGroupResponse = await CreateSecurityGroup(vpcResponse.Vpc.VpcId);
-        await CreateSecurityGroupIngress(securityGroupResponse.GroupId);
-        await CreateCluster();
-        await CreateEcr();
-        CreateResourceFile();
-    }
-
-    private async Task CreateRole()
-    {
-        Console.WriteLine("CreateRole started ...");
-        var accountId = await GetAccountId();
-        var role = new Dictionary<string, List<Dictionary<string,object>>>();
-        var statements = new Dictionary<string,object>();
-        statements.Add("Effect","Allow");
-        statements.Add("Action","sts:AssumeRole");
-        statements.Add("Principal",new Dictionary<string,string>
-        {
-            {"Service", "ecs-tasks.amazonaws.com"}
-        });
-        role.Add("Statement", new List<Dictionary<string,object>>()
-        {
-            statements
-        });
-        
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        var jsonString = JsonSerializer.Serialize(role, options);
-        var response = await ClientIam.CreateRoleAsync(new()
-        {
-            AssumeRolePolicyDocument = jsonString,
-            RoleName = "executionRole",
-            Description = "execution Role for ECS"
-        });
-        if( response.HttpStatusCode != HttpStatusCode.OK)
-            Console.WriteLine("Role Not Created");
-        Console.WriteLine($"role created result: {response.HttpStatusCode}");
-        var attachRolePolicyResponse = await ClientIam.AttachRolePolicyAsync(new AttachRolePolicyRequest
-        {
-            PolicyArn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
-            RoleName = "executionRole"
-        });
-        _resources.Add("roleName","executionRole");
-        _resources.Add("policyArn","arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy");
-        Console.WriteLine($"role attach result: {attachRolePolicyResponse.HttpStatusCode}");
-
-    }
-
-    private async Task CreateCluster()
-    {
-        Console.WriteLine("CreateCluster started...");
-        var response = await ClientEcs.CreateClusterAsync(new CreateClusterRequest
-        {
-            ClusterName = $"{ProjectName}-Cluster",
-            Tags = new List<Amazon.ECS.Model.Tag>
-            {
-                new()
-                {
-                    Key = "Project",
-                    Value = ProjectName
-                }
-            }
-        });
-        if (response.HttpStatusCode==HttpStatusCode.OK)
-        {
-            _resources.Add("clusterName",response.Cluster.ClusterName);
-        }
-        Console.WriteLine($"status: {response.HttpStatusCode}");
-    }
-
-
-    private async Task CreateEcr()
-    {
-        Console.WriteLine("Create Ecr ...");
-        var  eCreateRepositoryResponse = await ClientEcr.CreateRepositoryAsync(new CreateRepositoryRequest
-        {
-            RepositoryName = ProjectName,
-        });
-        if (eCreateRepositoryResponse.HttpStatusCode == HttpStatusCode.OK)
-        {
-            _resources.Add("RepositoryArn",eCreateRepositoryResponse.Repository.RepositoryArn);
-        }
-        Console.WriteLine($"status {eCreateRepositoryResponse.HttpStatusCode}");
-    }
-    private async Task<AuthorizeSecurityGroupIngressResponse> CreateSecurityGroupIngress(string groupId)
-    {
-        Console.WriteLine("Add Ingress Port");
-        var response =  await ClientEc2.AuthorizeSecurityGroupIngressAsync(new AuthorizeSecurityGroupIngressRequest
-        {
-            GroupId = groupId,
-            IpPermissions = new List<IpPermission>()
-            {
-                new IpPermission
-                {
-
-                    FromPort = 80,
-                    IpProtocol = "tcp",
-                    Ipv4Ranges = new List<IpRange>()
-                    {
-                        new IpRange
-                        {
-                            CidrIp = "0.0.0.0/0",
-                            Description = "Allow All HTTP request"
-                        }
-                    },
-                    ToPort = 80,
-
-                }
-            },
-            
-            TagSpecifications = _tagSpecifications
-        });
-        Console.WriteLine($"status:{response.HttpStatusCode}");
-        return response;
-    }
-    private async Task<CreateSecurityGroupResponse> CreateSecurityGroup(string vpcId)
-    {
-        Console.WriteLine("CreateSecurityGroup started....");
-        var securityGroupResponse =  await ClientEc2.CreateSecurityGroupAsync(new CreateSecurityGroupRequest
-        {
-            Description = "SecurityGroup", 
-            GroupName = $"{ProjectName}-SecurityGroup",
-            TagSpecifications = CreateTag(ResourceType.SecurityGroup),
-            VpcId = vpcId
-        });
-        
-        if (securityGroupResponse.HttpStatusCode == HttpStatusCode.OK)
-            _resources.Add("securityGroupId",securityGroupResponse.GroupId);
-        return securityGroupResponse;
-    }
-
-    private async Task<CreateRouteTableResponse> CreateRouteTable(string vpcId)
-    {
-        Console.WriteLine("CreateRouteTable started....");
-        var routeTableResponse =  await ClientEc2.CreateRouteTableAsync(new CreateRouteTableRequest
-        {
-            TagSpecifications = CreateTag(ResourceType.RouteTable),
-            VpcId = vpcId
-        });
-        if (routeTableResponse.HttpStatusCode == HttpStatusCode.OK)
-        {
-            _resources.Add("routeTableId",routeTableResponse.RouteTable.RouteTableId);
-        }
-        
-        return routeTableResponse;
-    }
-
-    private async Task<CreateRouteResponse> CreateRoute(string gatewayId,string routeTableId)
-    {
-        Console.WriteLine("CreateRoute started ....");
-        var routeResponse =  await ClientEc2.CreateRouteAsync(new CreateRouteRequest
-        {
-            DestinationCidrBlock = "0.0.0.0/0",
-            GatewayId = gatewayId,
-            RouteTableId = routeTableId,
-
-        });
-        return routeResponse;
-    }
-
-    private async Task<CreateInternetGatewayResponse> CreateInternetGateway(string vpcId)
-    {
-        Console.WriteLine("CreateInternetGateway started....");
-        var internetGatwayResponse =  await ClientEc2.CreateInternetGatewayAsync(new CreateInternetGatewayRequest
-        {
-            TagSpecifications = CreateTag(ResourceType.InternetGateway)
-        });
-        if (internetGatwayResponse.HttpStatusCode == HttpStatusCode.OK)
-        {
-            _resources.Add("internetGatewayId", internetGatwayResponse.InternetGateway.InternetGatewayId);
-            await ClientEc2.AttachInternetGatewayAsync(new AttachInternetGatewayRequest
-            {
-                InternetGatewayId = internetGatwayResponse.InternetGateway.InternetGatewayId,
-                VpcId = vpcId
-            });
-        }
-
-        return internetGatwayResponse;
-    }
-
-    private async Task<CreateSubnetResponse> CreateSubnet(string vpcId,string routeTableId)
-    {
-        Console.WriteLine("CreateSubnet started...");
-        var subnet= await ClientEc2.CreateSubnetAsync(new CreateSubnetRequest
-        {
-            AvailabilityZone = "us-east-1a",
-            CidrBlock = "10.0.0.0/24",
-            TagSpecifications = CreateTag(ResourceType.Subnet),
-            VpcId = vpcId,
-
-        });
-        if (subnet.HttpStatusCode == HttpStatusCode.OK)
-        {
-            _resources.Add("subnetId",subnet.Subnet.SubnetId);
-        }
-        Console.WriteLine("AssociateSubnet started...");
-        await ClientEc2.AssociateRouteTableAsync(new AssociateRouteTableRequest
-        {
-            RouteTableId = routeTableId,
-            SubnetId = subnet.Subnet.SubnetId
-        });
-        Console.WriteLine("AssociateSubnet ended...");
-       
-        return subnet;
-    }
-
-    private async Task<CreateVpcResponse> CreateVpc()
-    {
-       
-        Console.WriteLine("CreateVpc started...");
-        var vpc = await ClientEc2.CreateVpcAsync(new CreateVpcRequest
-        {
-            CidrBlock = "10.0.0.0/16",
-            TagSpecifications = CreateTag(ResourceType.Vpc),
-            
-        });
-        if (vpc.HttpStatusCode == HttpStatusCode.OK)
-        {
-            _resources.Add("vpcId",vpc.Vpc.VpcId);
-        }
-        Console.WriteLine($"status {vpc.HttpStatusCode}");
-        return vpc;
-    }
-    #endregion
-
-    #region DeployFunctions
-
-    public async Task Deploy(string dockerfile)
-    {
-        
-        _resources = ReadResourceFile();
-        _resources.TryGetValue("serviceName", out var serviceName);
-
-        var (image,registry) = await BuildImage(dockerfile);
-        var password = await DecodeRegistryLoginTokenToPassword();
-        await LoginToRegistry(password,registry);
-        await DeployImageToEcr(image);
-        
-        var taskDefinition = await RegisterTaskDefinition(image, $"{ProjectName}-Container");
-        if (serviceName is null)
-            await CreateService(_resources["clusterName"], _resources["securityGroupId"],_resources["subnetId"],taskDefinition.TaskDefinition.TaskDefinitionArn);
-        else
-            await UpdateService(_resources["clusterName"],serviceName, taskDefinition.TaskDefinition.TaskDefinitionArn);
-        
-        var ip = await GetEcsServiceIp();
-        Console.WriteLine(string.IsNullOrEmpty(ip) ? "couldn't find service ip" : $"Ip:{ip}");
-        // CreateResourceFile();
-    }
-
-    private async Task<string> GetEcsServiceIp()
-    {
-        _resources.TryGetValue("clusterName", out var clusterName);
-        _resources.TryGetValue("taskArn", out var taskId);
-
-        if (clusterName is null || taskId is null)
-        {
-            throw new SystemException("Either clusterName or taskId not Exist on infrastructore.json file");
-        }
-        var response = await ClientEcs.DescribeTasksAsync(new DescribeTasksRequest
-        {
-            Cluster = clusterName,
-            Include = null,
-            Tasks = new List<string>(){taskId}
-        });
-        foreach (var networkInterface in response.Tasks.First().Attachments.Select(attachment => attachment.Details.Single(d => d.Name == "networkInterfaceId")))
-        {
-            if (networkInterface is null)
-                throw new SystemException("No network Interfaces attached Ip found");
-
-            var networkInterfacesResponse = await ClientEc2.DescribeNetworkInterfacesAsync(new DescribeNetworkInterfacesRequest
-            {
-               
-                NetworkInterfaceIds = new List<string>{networkInterface.Value},
-            });
-            return networkInterfacesResponse.NetworkInterfaces.First().Association.PublicIp;
-        } 
-        return string.Empty;
-    }
-
+       await ClientEcs.DescribeTasksAsync(new DescribeTasksRequest
+       {
+           Cluster = null,
+           Include = null,
+           Tasks = null
+       });
+       return string.Empty;
+   }
 
     private async Task<(string imageName, string registry)> BuildImage(string dockerfile)
     {
@@ -638,7 +126,7 @@ public class SimpleStack
         var tag = Guid.NewGuid().ToString();
         //todo region static
         var registry = GetRegistry(accountId);
-        var imageName = $"{registry}/{ProjectName}:{tag}";
+        var imageName = $"{registry}/{RepoName}:{tag}";
         var result = await Cli.Wrap("docker")
             .WithArguments(args => args
                 .Add("build")
@@ -653,7 +141,6 @@ public class SimpleStack
             throw new SystemException(stdErr);
         return (imageName,registry);
     }
-
 
     private async Task<string> DecodeRegistryLoginTokenToPassword()
     {
@@ -698,61 +185,7 @@ public class SimpleStack
         // }
         Console.WriteLine(stdOut);
     }
-
-    private async Task<CreateServiceResponse> CreateService(string cluster,string securitGroup,string subnet, string taskDefinitionArn)
-    {
-        Console.WriteLine("CreateService started...");
-        var serviceName = $"{ProjectName}-Service";
-        var serviceResponse = await ClientEcs.CreateServiceAsync(new CreateServiceRequest
-        {
-            Cluster = cluster,
-            DeploymentConfiguration = new DeploymentConfiguration
-            {
-                MaximumPercent = 200,
-                MinimumHealthyPercent = 100
-            },
-            DeploymentController = new DeploymentController
-            {
-                Type = DeploymentControllerType.ECS
-            },
-            DesiredCount = 1,
-            LaunchType = LaunchType.FARGATE,
-            NetworkConfiguration = new NetworkConfiguration
-            {
-                AwsvpcConfiguration = new AwsVpcConfiguration
-                {
-                    AssignPublicIp = AssignPublicIp.ENABLED,
-                    SecurityGroups = new List<string>()
-                    {
-                        securitGroup
-                    },
-                    Subnets = new List<string>()
-                    {
-                       subnet
-                    }
-                }
-            },
-            SchedulingStrategy = SchedulingStrategy.REPLICA,
-            ServiceName = serviceName,
-            TaskDefinition = taskDefinitionArn,
-            Tags = new List<Amazon.ECS.Model.Tag>()
-            {
-                new Amazon.ECS.Model.Tag
-                {
-                    Key = "Project",
-                    Value = ProjectName
-                }
-            }
-        });
-        if (serviceResponse.HttpStatusCode==HttpStatusCode.OK)
-        {
-            _resources.Add("serviceName",serviceName);
-            var taskSetArn = serviceResponse.Service.TaskSets.First().TaskSetArn;
-            _resources.Add("taskId",taskSetArn);
-        }
-        Console.WriteLine($"status: {serviceResponse.HttpStatusCode}");
-        return serviceResponse;
-    }
+    
     private async Task<RegisterTaskDefinitionResponse> RegisterTaskDefinition(string image,string containerName)
     {
         Console.WriteLine("RegisterTaskDefinition....");
@@ -800,75 +233,22 @@ public class SimpleStack
         Console.WriteLine($"status: {taskDefinitionResponse.HttpStatusCode}");
         return taskDefinitionResponse;
     }
-    private async Task UpdateService(string cluster,string serviceName,string taskDefinitionArn)
+    private async Task<StackStatus?> GetStackStatus(string stackName)
     {
-        Console.WriteLine("UpdateService started...");
-        var updateServiceResponse = await ClientEcs.UpdateServiceAsync(new UpdateServiceRequest
-        {
-            Cluster = cluster,
-            Service = serviceName,
-            TaskDefinition = taskDefinitionArn,
-        });
-        Console.WriteLine($"status: {updateServiceResponse.HttpStatusCode}");
-    }
-    #endregion
-
-
-    #region Cloudformation
-
-    public async Task CloudformationInit(bool createDockerfile, string projectType)
-    {
-    
-        if (createDockerfile)
-            await CreateDockerfile(projectType);
-        var cloudFile = await ExtractTextFromRemoteFile("https://gist.githubusercontent.com/hamzabouissi/cfaa124891cfdc8d5e49f285ce24b997/raw/58f75fce22a51a4877912a278965bfc2b983ea08/base_infrastructure.json");
-        var parameters = new List<Parameter>()
-        {
-            new Parameter
-            {
-                ParameterKey = "ProjectName",
-                ParameterValue = ProjectName,
-
-            }
-        };
-        
         try
         {
-            
-            var response = await ClientCformation.CreateStackAsync(new CreateStackRequest
+            var stacksResponse =await ClientCformation.DescribeStacksAsync(new DescribeStacksRequest
             {
-                DisableRollback = false,
-                EnableTerminationProtection = false,
-                NotificationARNs = null,
-                Parameters = parameters,
-                ResourceTypes = null,
-                StackName = MainStackName,
-                TemplateBody = cloudFile,
-                TimeoutInMinutes = 5
+                StackName = stackName
             });
+            var stackStatus = stacksResponse.Stacks.First().StackStatus;
+            return stackStatus;
         }
-        catch (AlreadyExistsException)
+        catch (Exception e)
         {
-            Console.WriteLine("Update stack...");
-            await ClientCformation.UpdateStackAsync(new UpdateStackRequest
-            {
-            
-                DisableRollback = false,
-                StackName = MainStackName,
-                UsePreviousTemplate = true
-            });
+            return null;
         }
-        await DisplayResourcesStatus(MainStackName);
-    }
-
-    private async Task<StackStatus> GetStackStatus(string stackName)
-    {
-        var stacksResponse =await ClientCformation.DescribeStacksAsync(new DescribeStacksRequest
-        {
-            StackName = stackName
-        });
-        var stackStatus = stacksResponse.Stacks.First().StackStatus;
-        return stackStatus;
+       
     }
     private async Task DisplayResourcesStatus(string stackName)
     {
@@ -879,9 +259,10 @@ public class SimpleStack
             StackStatus.DELETE_IN_PROGRESS,
             StackStatus.UPDATE_IN_PROGRESS,
         };
-        var stackStatus = await GetStackStatus(stackName); 
-        Console.WriteLine($"Stack Status: {stackStatus}");
-        Console.WriteLine("====>");
+        var stackStatus = await GetStackStatus(stackName);
+        if (stackStatus is null)
+            return;
+        
         while(endStatus.Exists(e=>e==stackStatus))
         {
             var eventsResponse = await ClientCformation.DescribeStackResourcesAsync(new DescribeStackResourcesRequest()
@@ -892,136 +273,16 @@ public class SimpleStack
                 Console.WriteLine($"{resource.ResourceType}, status = {resource.ResourceStatus}");
 
             Thread.Sleep(5);
-            stackStatus = await GetStackStatus(stackName); 
-            Console.WriteLine($"Stack Status: {stackStatus}");
-            Console.WriteLine("====>");
-            
-        }
-    }
-
-
-    private async Task<DeleteStackResponse> DeleteStack(string stackName)
-    {
-        
-        var deleteServiceStackResponse = await ClientCformation.DeleteStackAsync(new DeleteStackRequest
-        {
-            StackName = stackName
-        });
-        return deleteServiceStackResponse;
-    }
-    public async Task CloudformationDestroy()
-    {
-        Console.WriteLine("Delete Service");
-        try
-        {
-            var response = await ClientEcs.DeleteServiceAsync(new DeleteServiceRequest
+            stackStatus = await GetStackStatus(stackName);
+            if (stackStatus is null)
+                Console.WriteLine("Stack Status: DELETE_COMPLETE");
+            else
             {
-                Cluster = ClusterName,
-                Force = true,
-                Service = ServiceName
-            });
-            Console.WriteLine($"status: {response.HttpStatusCode}");
-            
-        }
-        catch (ServiceNotFoundException e)
-        {
-            Console.WriteLine("Service Not Found on Ecs...");
-        }
-        
-        try
-        {
-            Console.WriteLine("Delete Service Stack");
-            var deleteServiceStackResponse = await DeleteStack(ServiceStackName);
-            Console.WriteLine($"status: {deleteServiceStackResponse.HttpStatusCode}");
-        }
-        catch (StackNotFoundException )
-        {
-            Console.WriteLine("No Service Stack....");
-        }
-        
-        
-        Console.WriteLine("Delete Main Stack");
-        var stackDeleteResponse = await DeleteStack(MainStackName);
-        Console.WriteLine($"status: {stackDeleteResponse.HttpStatusCode}");
-        await DisplayResourcesStatus(MainStackName);
-       
-    }
-    public async Task CloudformationDeploy(string dockerfile)
-    {
-        
-        var (image,registry) = await BuildImage(dockerfile);
-        var password = await DecodeRegistryLoginTokenToPassword();
-        await LoginToRegistry(password,registry);
-        await DeployImageToEcr(image);
-        
-        var taskDefinition = await RegisterTaskDefinition(image, $"{ProjectName}-Container");
-        var eventsResponse = await ClientCformation.DescribeStackResourcesAsync(new DescribeStackResourcesRequest()
-        {
-            StackName = MainStackName
-        });
-        var subnetId = eventsResponse.StackResources.First(p => p.ResourceType == "AWS::EC2::Subnet").PhysicalResourceId;
-        var securityGroupId = eventsResponse.StackResources.First(p => p.ResourceType == "AWS::EC2::SecurityGroup").PhysicalResourceId;
-        var cloudFile = await ExtractTextFromRemoteFile("https://gist.githubusercontent.com/hamzabouissi/cfaa124891cfdc8d5e49f285ce24b997/raw/b812183e94f3379f4fa048f3c7c93d137234b68f/ecs-service.json");
-
-        var parameters = new List<Parameter>()
-        {
-            new Parameter
-            {
-                ParameterKey = "SubnetId",
-                ParameterValue = subnetId,
-
-            },
-            new Parameter
-            {
-                ParameterKey = "SecurityGroupId",
-                ParameterValue = securityGroupId,
-
-            },
-            new Parameter
-            {
-                ParameterKey = "ProjectName",
-                ParameterValue = ProjectName,
-
-            },
-            new Parameter()
-            {
-                ParameterKey = "ServiceName",
-                ParameterValue = ServiceName,
-            },
-            new Parameter()
-            {
-                ParameterKey = "TaskDefinition",
-                ParameterValue = taskDefinition.TaskDefinition.TaskDefinitionArn,
+                Console.WriteLine("====>");
+                Console.WriteLine($"Stack Status: {stackStatus}");
+                Console.WriteLine("====>");
             }
-        };
-        try
-        {
-            var response = await ClientCformation.CreateStackAsync(new CreateStackRequest
-            {
-                DisableRollback = false,
-                Parameters =parameters,
-                StackName = ServiceStackName,
-                TemplateBody = cloudFile,
-                TimeoutInMinutes = 5
-            });
-        }
-        catch (AlreadyExistsException )
-        {
-            Console.WriteLine($"updating service stack {ServiceStackName}");
-            var response = await ClientCformation.UpdateStackAsync(new UpdateStackRequest
-            {
-
-                Parameters = parameters,
-                StackName = ServiceStackName,
-                UsePreviousTemplate = true,
-            });
-        }
-        await DisplayResourcesStatus(ServiceStackName);
-        var stackStatus = await GetStackStatus(MainStackName);
-        if (stackStatus == StackStatus.CREATE_COMPLETE)
-        {
-            _resources.Add("ServiceStack",ServiceStackName);
-            CreateResourceFile();
+            
         }
     }
     private async Task CreateDockerfile(string projectType)
@@ -1041,9 +302,215 @@ public class SimpleStack
         var dockerfileContent = await url.GetStringAsync();
         await File.WriteAllTextAsync("Dockerfile",dockerfileContent);
     }
+    private async Task DeleteEcrImages(string repo)
+    {
+        
+        var imagesResponse = await ClientEcr.ListImagesAsync(request: new ListImagesRequest { RepositoryName = repo });
+        if (imagesResponse.ImageIds.Count == 0)
+            return;
+        
+        Console.WriteLine("DeleteEcrImages started....");
+        await ClientEcr.BatchDeleteImageAsync(new BatchDeleteImageRequest
+        {
+            ImageIds = imagesResponse.ImageIds,
+            RepositoryName = repo
+        });
+    }
+    private async Task<DeleteStackResponse?> DeleteStack(string stackName)
+    {
+        try
+        {
+            Console.WriteLine($"Delete Stack {stackName}");
+            var deleteServiceStackResponse = await ClientCformation.DeleteStackAsync(new DeleteStackRequest
+            {
+                StackName = stackName
+            });
+            var stackStatus = await GetStackStatus(ServiceStackName);
+            Console.WriteLine("Deleting Stack On Progress");
+            while (stackStatus != null && stackStatus != StackStatus.DELETE_COMPLETE)
+            {
+                Thread.Sleep(5);
+                stackStatus = await GetStackStatus(ServiceStackName);
+            }
+            Console.WriteLine("Deleting Stack Completed");
+            return deleteServiceStackResponse;
+        }
+        catch (StackNotFoundException)
+        {
+            Console.WriteLine($"No Stack {stackName}....");
+            return null;
+        }
+                
+    }
+    private async Task DeleteService()
+    {
+        var tasksResponse = await ClientEcs.ListTasksAsync(new ListTasksRequest
+        {
+            Cluster = ClusterName,
+        });
+        foreach (var task in tasksResponse.TaskArns)
+        {
+            await ClientEcs.StopTaskAsync(new StopTaskRequest
+            {
+                Cluster = ClusterName,
+                Task = task
+            });
+        }
+        try
+        {
+            var response = await ClientEcs.DeleteServiceAsync(new DeleteServiceRequest
+            {
+                Cluster = ClusterName,
+                Force = true,
+                Service = ServiceName
+            });
+            Console.WriteLine($"status: {response.HttpStatusCode}");
+        }
+        catch (ServiceNotFoundException e)
+        {
+            Console.WriteLine("Service Not Found on Ecs...");
+        }
+    }
+    
+    #region Cloudformation
+    public async Task CloudformationInit(bool createDockerfile, string projectType)
+    {
+        if (createDockerfile)
+            await CreateDockerfile(projectType);
+        var cloudFile = await ExtractTextFromRemoteFile("https://fissaa-cli.s3.amazonaws.com/test/network.yml");
+        var parameters = new List<Parameter>()
+        {
+            new ()
+            {
+                ParameterKey = "RepositoryName",
+                ParameterValue = RepoName,
+            }
+        };
+        
+        try
+        {
+            
+            var response = await ClientCformation.CreateStackAsync(new CreateStackRequest
+            {
+                OnFailure = OnFailure.DELETE,
+                Parameters = parameters,
+                StackName = MainStackName,
+                Capabilities = new List<string>()
+                {
+                    "CAPABILITY_NAMED_IAM"
+                },
+                TemplateBody = cloudFile,
+                TimeoutInMinutes = 5
+            });
+            
+        }
+        catch (AlreadyExistsException)
+        {
+            Console.WriteLine("Update stack...");
+            await ClientCformation.UpdateStackAsync(new UpdateStackRequest
+            {
+            
+                DisableRollback = false,
+                StackName = MainStackName,
+                UsePreviousTemplate = true
+            });
+        }
+        await DisplayResourcesStatus(MainStackName);
+        var stackStatus = await GetStackStatus(MainStackName);
+        if (stackStatus is null)
+            return;
+        var describeStacksResponse = await ClientCformation.DescribeStacksAsync(new DescribeStacksRequest
+        {
+            StackName = MainStackName
+        });
+        var stack = describeStacksResponse.Stacks.First();
+        var output = stack.Outputs.Single(o => o.OutputKey == "ExternalUrl");
+        Console.WriteLine($"ExternalUrl: {output.OutputValue}");
+    }
+    public async Task CloudformationDestroy()
+    {
+        await DeleteEcrImages(RepoName);
+        await DeleteService();
+        await DeleteStack(ServiceStackName);
+        await DeleteStack(MainStackName);
+        // await DisplayResourcesStatus(MainStackName);
+    }
+
+    public async Task CloudformationDeploy(string dockerfile)
+    {
+        
+        var (image,registry) = await BuildImage(dockerfile);
+        var password = await DecodeRegistryLoginTokenToPassword();
+        await LoginToRegistry(password,registry);
+        await DeployImageToEcr(image);
+        
+        var cloudFile = await ExtractTextFromRemoteFile("https://fissaa-cli.s3.amazonaws.com/test/service.yml");
+        var parameters = new List<Parameter>()
+        {
+           new ()
+           {
+               ParameterKey = "StackName",
+               ParameterValue = MainStackName,
+           },
+           new ()
+           {
+               ParameterKey = "ServiceName",
+               ParameterValue = ServiceName,
+           },
+           new ()
+           {
+               ParameterKey = "HealthCheckPath",
+               ParameterValue = "/",
+           },
+           new ()
+           {
+               ParameterKey = "ImageUrl",
+               ParameterValue = image,
+           },
+           new ()
+           {
+               ParameterKey="HealthCheckIntervalSeconds",
+               ParameterValue="90"
+           },
+           new ()
+           {
+               ParameterKey = "Path",
+               ParameterValue = "/service_1",
+           },
+           new ()
+           {
+               ParameterKey = "Priority",
+               ParameterValue = "1",
+           },
+        };
+        try
+        {
+            var response = await ClientCformation.CreateStackAsync(new CreateStackRequest
+            {
+                OnFailure = OnFailure.DELETE,
+                Parameters = parameters,
+                StackName = ServiceStackName,
+                TemplateBody = cloudFile,
+                TimeoutInMinutes = 5,
+
+
+            });
+            
+        }
+        catch (AlreadyExistsException )
+        {
+            Console.WriteLine($"updating service stack {ServiceStackName}");
+            var response = await ClientCformation.UpdateStackAsync(new UpdateStackRequest
+            {
+
+                Parameters = parameters,
+                StackName = ServiceStackName,
+                UsePreviousTemplate = true,
+            });
+        }
+        await DisplayResourcesStatus(ServiceStackName);
+    }
 
     #endregion
-
-
    
 }

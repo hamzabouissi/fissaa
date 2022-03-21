@@ -7,7 +7,7 @@ public class InfrastructureInitCommand: AsyncCommand<InfrastructureInitCommandSe
   
     public override  async Task<int> ExecuteAsync(CommandContext context, InfrastructureInitCommandSettings settings)
     {
-        var stack = new SimpleStack(settings.AwsSecretKey,settings.AwsAcessKey,settings.Project);
+        var stack = new AWSoldStack(settings.AwsSecretKey,settings.AwsAcessKey,settings.Project);
         await stack.Init();
         // try
         // {
