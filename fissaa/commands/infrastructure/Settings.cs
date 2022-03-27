@@ -43,16 +43,18 @@ public sealed class InfrastructureInitCommandSettings : InfrastructureSettings
     public bool CreateDockerfile { get; set; } = false;
 
     [CommandOption("--project-type")] public string? ProjectType { get; set; } = null;
-    
+
+    private readonly List<string> ProjectTypeChoices = new()
+    {
+        "Fastapi", "AspNetCore", "NodeJs",
+    };
     public override ValidationResult Validate()
     {
         return string.IsNullOrEmpty(ProjectType) || ProjectTypeChoices.Exists(p => p == ProjectType)
             ? ValidationResult.Success()
             : ValidationResult.Error("--project-type choice is wrong");
     }
-    public readonly List<string> ProjectTypeChoices=new () {
-        "Fastapi", "AspNetCore", "NodeJs", 
-    };
+   
     public InfrastructureInitCommandSettings(bool createDockerfile,string projectType)
     {
         CreateDockerfile = createDockerfile;

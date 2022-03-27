@@ -6,7 +6,7 @@ public class InfrastructureCloudformationDeployCommand:AsyncCommand<Infrastructu
 {
     public override async Task<int> ExecuteAsync(CommandContext context, InfrastructureDeployCommandSettings settings)
     {
-        var stack = new SimpleStack(settings.AwsSecretKey,settings.AwsAcessKey,settings.Project);
+        var stack = new AwsNetworkStack(settings.AwsSecretKey,settings.AwsAcessKey,settings.Project);
         await stack.CloudformationDeploy(settings.DockerfilePath);
         return 0;
     }
