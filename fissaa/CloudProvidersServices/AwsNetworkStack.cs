@@ -156,11 +156,6 @@ public class AwsNetworkStack
            },
            new ()
            {
-               ParameterKey = "Path",
-               ParameterValue = "/service_1",
-           },
-           new ()
-           {
                ParameterKey = "Priority",
                ParameterValue = "1",
            },
