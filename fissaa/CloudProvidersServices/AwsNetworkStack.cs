@@ -66,6 +66,11 @@ public class AwsNetworkStack
             {
                 ParameterKey = "RepositoryName",
                 ParameterValue = RepoName,
+            },
+            new ()
+            {
+                ParameterKey = "ClusterName",
+                ParameterValue = ClusterName,
             }
         };
         

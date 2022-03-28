@@ -226,14 +226,20 @@ public class AwsUtilFunctions
         
         var imagesResponse = await ClientEcr.ListImagesAsync(request: new ListImagesRequest { RepositoryName = repo });
         if (imagesResponse.ImageIds.Count == 0)
+        {
+            Console.WriteLine("NO IMAGES");
             return;
+        }
         
         Console.WriteLine("DeleteEcrImages started....");
-        await ClientEcr.BatchDeleteImageAsync(new BatchDeleteImageRequest
+        var result = await ClientEcr.BatchDeleteImageAsync(new BatchDeleteImageRequest
         {
             ImageIds = imagesResponse.ImageIds,
             RepositoryName = repo
         });
+        Console.WriteLine(result.HttpStatusCode);
+        result.Failures.ForEach(p=>Console.WriteLine(p.FailureReason));
+        
     }
     
     public async Task CreateDockerfile(string projectType)

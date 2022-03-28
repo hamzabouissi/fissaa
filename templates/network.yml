@@ -7,6 +7,10 @@ Parameters:
   RepositoryName:
     Type: String
     Description: The name of the repository.
+  
+  ClusterName:
+    Type: String
+    Description: The name of the Cluster.
 
 Resources:
 
@@ -107,7 +111,6 @@ Resources:
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
-      Name: "no-op"
       Port: 80
       Protocol: HTTP
       UnhealthyThresholdCount: 2
@@ -127,6 +130,7 @@ Resources:
 
   ECSCluster:
     Type: AWS::ECS::Cluster
+    ClusterName: !Ref ClusterName
 
   ECSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
