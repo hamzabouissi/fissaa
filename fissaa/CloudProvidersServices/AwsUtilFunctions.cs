@@ -161,7 +161,6 @@ public class AwsUtilFunctions
         Console.WriteLine("BuildImage started");
         var accountId = await GetAccountId();
         var tag = Guid.NewGuid().ToString();
-        //todo region static
         var registry = GetRegistry(accountId);
         var imageName = $"{registry}/{RepoName}:{tag}";
         var result = await Cli.Wrap("docker")

@@ -69,7 +69,7 @@ public class AwsNetworkStack
             },
             new ()
             {
-                ParameterKey = "ClusterName",
+                ParameterKey = "Clustername",
                 ParameterValue = ClusterName,
             }
         };

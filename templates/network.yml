@@ -1,109 +1,95 @@
-AWSTemplateFormatVersion: "2010-09-09"
-Description: A network stack for deploying containers in AWS ECS.
-  This stack creates a VPC with two public subnets and a loadbalancer to balance traffic between those subnets.
-  Derived from a template at https://github.com/nathanpeck/aws-cloudformation-fargate.
-
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  A network stack for deploying containers in AWS ECS. This stack creates a VPC
+  with two public subnets and a loadbalancer to balance traffic between those
+  subnets. Derived from a template at
+  https://github.com/nathanpeck/aws-cloudformation-fargate.
 Parameters:
   RepositoryName:
     Type: String
     Description: The name of the repository.
-  
-  ClusterName:
+  Clustername:
     Type: String
     Description: The name of the Cluster.
-
 Resources:
-
   MyRepository:
-    Type: AWS::ECR::Repository
+    Type: 'AWS::ECR::Repository'
     Properties:
-      RepositoryName: !Ref "RepositoryName"
-
+      RepositoryName: !Ref RepositoryName
   VPC:
-    Type: AWS::EC2::VPC
+    Type: 'AWS::EC2::VPC'
     Properties:
-      CidrBlock: "10.0.0.0/16"
-
+      CidrBlock: 10.0.0.0/16
   PublicSubnetOne:
-    Type: AWS::EC2::Subnet
+    Type: 'AWS::EC2::Subnet'
     Properties:
       AvailabilityZone:
-        Fn::Select:
+        'Fn::Select':
           - 0
-          - Fn::GetAZs: { Ref: "AWS::Region" }
-      VpcId: !Ref "VPC"
-      CidrBlock: "10.0.1.0/24"
+          - 'Fn::GetAZs':
+              Ref: 'AWS::Region'
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
       MapPublicIpOnLaunch: true
-
   PublicSubnetTwo:
-    Type: AWS::EC2::Subnet
+    Type: 'AWS::EC2::Subnet'
     Properties:
       AvailabilityZone:
-        Fn::Select:
+        'Fn::Select':
           - 1
-          - Fn::GetAZs: { Ref: "AWS::Region" }
-      VpcId: !Ref "VPC"
-      CidrBlock: "10.0.2.0/24"
+          - 'Fn::GetAZs':
+              Ref: 'AWS::Region'
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
       MapPublicIpOnLaunch: true
-
   InternetGateway:
-    Type: AWS::EC2::InternetGateway
-
+    Type: 'AWS::EC2::InternetGateway'
   GatewayAttachement:
-    Type: AWS::EC2::VPCGatewayAttachment
+    Type: 'AWS::EC2::VPCGatewayAttachment'
     Properties:
-      VpcId: !Ref "VPC"
-      InternetGatewayId: !Ref "InternetGateway"
-
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
   PublicRouteTable:
-    Type: AWS::EC2::RouteTable
+    Type: 'AWS::EC2::RouteTable'
     Properties:
-      VpcId: !Ref "VPC"
-
+      VpcId: !Ref VPC
   PublicSubnetOneRouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       SubnetId: !Ref PublicSubnetOne
       RouteTableId: !Ref PublicRouteTable
-
   PublicSubnetTwoRouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       SubnetId: !Ref PublicSubnetTwo
       RouteTableId: !Ref PublicRouteTable
-
   PublicRoute:
-    Type: AWS::EC2::Route
+    Type: 'AWS::EC2::Route'
     DependsOn: GatewayAttachement
     Properties:
-      RouteTableId: !Ref "PublicRouteTable"
-      DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref "InternetGateway"
-
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
   PublicLoadBalancerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
+    Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Access to the public facing load balancer
-      VpcId: !Ref "VPC"
+      VpcId: !Ref VPC
       SecurityGroupIngress:
-        # Allow access to ALB from anywhere on the internet
         - CidrIp: 0.0.0.0/0
           IpProtocol: -1
-
   PublicLoadBalancer:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
     DependsOn: GatewayAttachement
     Properties:
       Scheme: internet-facing
       Subnets:
-        # The load balancer is placed into the public subnets, so that traffic
-        # from the internet can reach the load balancer directly via the internet gateway
         - !Ref PublicSubnetOne
         - !Ref PublicSubnetTwo
-      SecurityGroups: [!Ref "PublicLoadBalancerSecurityGroup"]
-
+      SecurityGroups:
+        - !Ref PublicLoadBalancerSecurityGroup
   DummyTargetGroupPublic:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     DependsOn: GatewayAttachement
     Properties:
       HealthCheckIntervalSeconds: 6
@@ -114,55 +100,53 @@ Resources:
       Port: 80
       Protocol: HTTP
       UnhealthyThresholdCount: 2
-      VpcId: !Ref "VPC"
-
+      VpcId: !Ref VPC
   PublicLoadBalancerListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
     DependsOn:
       - PublicLoadBalancer
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref "DummyTargetGroupPublic"
-          Type: "forward"
-      LoadBalancerArn: !Ref "PublicLoadBalancer"
+        - TargetGroupArn: !Ref DummyTargetGroupPublic
+          Type: forward
+      LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 80
       Protocol: HTTP
-
   ECSCluster:
-    Type: AWS::ECS::Cluster
-    ClusterName: !Ref ClusterName
-
+    Type: 'AWS::ECS::Cluster'
+    Properties:
+      ClusterName: !Ref Clustername
+    
   ECSSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
+    Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Access to the ECS containers
-      VpcId: !Ref "VPC"
-
+      VpcId: !Ref VPC
   ECSSecurityGroupIngressFromPublicALB:
-    Type: AWS::EC2::SecurityGroupIngress
+    Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
       Description: Ingress from the public ALB
-      GroupId: !Ref "ECSSecurityGroup"
+      GroupId: !Ref ECSSecurityGroup
       IpProtocol: -1
-      SourceSecurityGroupId: !Ref "PublicLoadBalancerSecurityGroup"
-
+      SourceSecurityGroupId: !Ref PublicLoadBalancerSecurityGroup
   ECSSecurityGroupIngressFromSelf:
-    Type: AWS::EC2::SecurityGroupIngress
+    Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
       Description: Ingress from other containers in the same security group
-      GroupId: !Ref "ECSSecurityGroup"
+      GroupId: !Ref ECSSecurityGroup
       IpProtocol: -1
-      SourceSecurityGroupId: !Ref "ECSSecurityGroup"
-
+      SourceSecurityGroupId: !Ref ECSSecurityGroup
   ECSRole:
-    Type: AWS::IAM::Role
+    Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
         Statement:
           - Effect: Allow
             Principal:
-              Service: [ecs.amazonaws.com]
-            Action: ["sts:AssumeRole"]
+              Service:
+                - ecs.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
       Path: /
       Policies:
         - PolicyName: ecs-service
@@ -170,34 +154,30 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  # Rules which allow ECS to attach network interfaces to instances
-                  # on your behalf in order for awsvpc networking mode to work right
-                  - "ec2:AttachNetworkInterface"
-                  - "ec2:CreateNetworkInterface"
-                  - "ec2:CreateNetworkInterfacePermission"
-                  - "ec2:DeleteNetworkInterface"
-                  - "ec2:DeleteNetworkInterfacePermission"
-                  - "ec2:Describe*"
-                  - "ec2:DetachNetworkInterface"
-
-                  # Rules which allow ECS to update load balancers on your behalf
-                  # with the information sabout how to send traffic to your containers
-                  - "elasticloadbalancing:DeregisterInstancesFromLoadBalancer"
-                  - "elasticloadbalancing:DeregisterTargets"
-                  - "elasticloadbalancing:Describe*"
-                  - "elasticloadbalancing:RegisterInstancesWithLoadBalancer"
-                  - "elasticloadbalancing:RegisterTargets"
-                Resource: "*"
-
+                  - 'ec2:AttachNetworkInterface'
+                  - 'ec2:CreateNetworkInterface'
+                  - 'ec2:CreateNetworkInterfacePermission'
+                  - 'ec2:DeleteNetworkInterface'
+                  - 'ec2:DeleteNetworkInterfacePermission'
+                  - 'ec2:Describe*'
+                  - 'ec2:DetachNetworkInterface'
+                  - 'elasticloadbalancing:DeregisterInstancesFromLoadBalancer'
+                  - 'elasticloadbalancing:DeregisterTargets'
+                  - 'elasticloadbalancing:Describe*'
+                  - 'elasticloadbalancing:RegisterInstancesWithLoadBalancer'
+                  - 'elasticloadbalancing:RegisterTargets'
+                Resource: '*'
   ECSTaskExecutionRole:
-    Type: AWS::IAM::Role
+    Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
         Statement:
           - Effect: Allow
             Principal:
-              Service: [ecs-tasks.amazonaws.com]
-            Action: ["sts:AssumeRole"]
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
       Path: /
       Policies:
         - PolicyName: AmazonECSTaskExecutionRolePolicy
@@ -205,60 +185,83 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  # Allow the ECS Tasks to download images from ECR
-                  - "ecr:GetAuthorizationToken"
-                  - "ecr:BatchCheckLayerAvailability"
-                  - "ecr:GetDownloadUrlForLayer"
-                  - "ecr:BatchGetImage"
-
-                  # Allow the ECS tasks to upload logs to CloudWatch
-                  - "logs:CreateLogStream"
-                  - "logs:PutLogEvents"
-                Resource: "*"
-
+                  - 'ecr:GetAuthorizationToken'
+                  - 'ecr:BatchCheckLayerAvailability'
+                  - 'ecr:GetDownloadUrlForLayer'
+                  - 'ecr:BatchGetImage'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
 Outputs:
   ClusterName:
     Description: The name of the ECS cluster
-    Value: !Ref "ECSCluster"
+    Value: !Ref ECSCluster
     Export:
       Name: !Join [":", [!Ref "AWS::StackName", "ClusterName"]]
   ExternalUrl:
     Description: The url of the external load balancer
-    Value: !Join ["", ["http://", !GetAtt "PublicLoadBalancer.DNSName"]]
+    Value: !Join 
+      - ''
+      - - 'http://'
+        - !GetAtt PublicLoadBalancer.DNSName
     Export:
-      Name: !Join [":", [!Ref "AWS::StackName", "ExternalUrl"]]
+      Name: !Join 
+        - ':'
+        - - !Ref 'AWS::StackName'
+          - PublicLoadBalancer
   ECSRole:
     Description: The ARN of the ECS role
-    Value: !GetAtt "ECSRole.Arn"
+    Value: !GetAtt ECSRole.Arn
     Export:
-      Name: !Join [":", [!Ref "AWS::StackName", "ECSRole"]]
+      Name: !Join 
+        - ':'
+        - - !Ref 'AWS::StackName'
+          - ECSRole
   ECSTaskExecutionRole:
     Description: The ARN of the ECS role
-    Value: !GetAtt "ECSTaskExecutionRole.Arn"
+    Value: !GetAtt ECSTaskExecutionRole.Arn
     Export:
-      Name: !Join [":", [!Ref "AWS::StackName", "ECSTaskExecutionRole"]]
+      Name: !Join 
+        - ':'
+        - - !Ref 'AWS::StackName'
+          - ECSTaskExecutionRole
   PublicListener:
     Description: The ARN of the public load balancer's Listener
     Value: !Ref PublicLoadBalancerListener
     Export:
-      Name: !Join [":", [!Ref "AWS::StackName", "PublicListener"]]
+      Name: !Join 
+        - ':'
+        - - !Ref 'AWS::StackName'
+          - PublicListener
   VPCId:
     Description: The ID of the VPC that this stack is deployed in
-    Value: !Ref "VPC"
+    Value: !Ref VPC
     Export:
-      Name: !Join [":", [!Ref "AWS::StackName", "VPCId"]]
+      Name: !Join 
+        - ':'
+        - - !Ref 'AWS::StackName'
+          - VPCId
   PublicSubnetOne:
     Description: Public subnet one
-    Value: !Ref "PublicSubnetOne"
+    Value: !Ref PublicSubnetOne
     Export:
-      Name: !Join [":", [!Ref "AWS::StackName", "PublicSubnetOne"]]
+      Name: !Join 
+        - ':'
+        - - !Ref 'AWS::StackName'
+          - PublicSubnetOne
   PublicSubnetTwo:
     Description: Public subnet two
-    Value: !Ref "PublicSubnetTwo"
+    Value: !Ref PublicSubnetTwo
     Export:
-      Name: !Join [":", [!Ref "AWS::StackName", "PublicSubnetTwo"]]
+      Name: !Join 
+        - ':'
+        - - !Ref 'AWS::StackName'
+          - PublicSubnetTwo
   ECSSecurityGroup:
     Description: A security group used to allow ECS containers to receive traffic
-    Value: !Ref "ECSSecurityGroup"
+    Value: !Ref ECSSecurityGroup
     Export:
-      Name: !Join [":", [!Ref "AWS::StackName", "ECSSecurityGroup"]]
+      Name: !Join 
+        - ':'
+        - - !Ref 'AWS::StackName'
+          - ECSSecurityGroup
