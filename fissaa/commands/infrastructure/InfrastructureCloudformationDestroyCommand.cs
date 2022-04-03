@@ -7,7 +7,7 @@ public class InfrastructureCloudformationDestroyCommand:AsyncCommand<Infrastruct
     public override async Task<int> ExecuteAsync(CommandContext context, InfrastructureDestroyCommandSettings settings)
     {
         var stack = new AwsNetworkStack(settings.AwsSecretKey,settings.AwsAcessKey,settings.Project);
-        await stack.CloudformationDestroy();
+        await stack.CloudformationDestroy(settings.only_app is not null);
         return 0;
     }
 }

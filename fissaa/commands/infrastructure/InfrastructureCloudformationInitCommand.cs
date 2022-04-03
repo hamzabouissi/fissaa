@@ -7,8 +7,8 @@ public class InfrastructureCloudformationInitCommand:AsyncCommand<Infrastructure
 {
     public override async Task<int> ExecuteAsync(CommandContext context, InfrastructureInitCommandSettings settings)
     {
-        var stack = new AwsNetworkStack(settings.AwsSecretKey, settings.AwsAcessKey, settings.Project);
-        await stack.CloudformationInit(settings.CreateDockerfile,settings.ProjectType);
+        var stack = new AwsNetworkStack(settings.AwsSecretKey, settings.AwsAcessKey,string.Empty);
+        await stack.CloudformationInit(settings.DomainName);
         return 0;
     }
     public override ValidationResult Validate(CommandContext context, InfrastructureInitCommandSettings settings)

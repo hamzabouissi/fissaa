@@ -3,6 +3,9 @@ Parameters:
     Type: String
     Description: The name of the networking stack that
       these resources are put into.
+  HostedZoneId:
+    Type: String
+    Description: name of domain stack 
   ServiceName:
     Type: String
     Description: A human-readable name for the service.
@@ -30,19 +33,16 @@ Parameters:
     Type: Number
     Default: 512
     Description: How much memory in megabytes to give the container.
-  Path:
+  Domain:
     Type: String
-    Default: /*
-    Description: A path on the public load balancer that this service
-      should be connected to.
+    Description: the domain of your app
   DesiredCount:
     Type: Number
     Default: 1
     Description: How many copies of the service task to run.
-  
   Priority:
     Type: Number
-   
+  
 
 Resources:
   TaskDefinition:
@@ -105,6 +105,8 @@ Resources:
         - ContainerName: !Ref "ServiceName"
           ContainerPort: !Ref "ContainerPort"
           TargetGroupArn: !Ref "TargetGroup"
+        
+       
 
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -115,13 +117,12 @@ Resources:
       HealthCheckTimeoutSeconds: 20
       HealthyThresholdCount: 2
       TargetType: ip
-      Name: !Ref "ServiceName"
-      Port: !Ref "ContainerPort"
+      Name: !Join [ "", [ "Https", !Ref "ServiceName" ] ]
+      Port: 80
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId:
         Fn::ImportValue: !Join [":", [!Ref "StackName", "VPCId"]]
-
   LoadBalancerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
@@ -129,11 +130,24 @@ Resources:
         - TargetGroupArn: !Ref "TargetGroup"
           Type: "forward"
       Conditions:
-        - Field: path-pattern
-          PathPatternConfig:
-            Values: 
-              - !Ref "Path"  
-              
+        - Field: host-header
+          HostHeaderConfig:
+            Values:
+              - !Join [".", ["www", !Ref "Domain"]]
+              - !Ref "Domain"  
       ListenerArn:
-        Fn::ImportValue: !Join [":", [!Ref "StackName", "PublicListener"]]
+        Fn::ImportValue: !Join [":", [!Ref "StackName", "HttpsPublicListener"]]
       Priority: !Ref "Priority"
+      
+  DomainRecordSetGroup:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref "HostedZoneId"
+      RecordSets:
+        - Name: !Ref "Domain"
+          Type: "A"
+          AliasTarget:
+            DNSName:
+              Fn::ImportValue: !Join [":", [!Ref "StackName", "ElbDnsName"]]
+            HostedZoneId: 
+              Fn::ImportValue: !Join [":", [!Ref "StackName", "ElbHostedZone"]]

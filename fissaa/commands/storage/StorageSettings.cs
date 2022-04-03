@@ -7,15 +7,17 @@ namespace fissaa.commands.storage;
 
 public class StorageSettings:CommandSettings
 {
-    [Description("project-name must be unique across your aws account")]
-    [CommandArgument( 0,"<project-name>")]
-    public string Project { get; set; }
+   
     
     [CommandArgument(0,"<aws-secret-key>")]
     public string AwsSecretKey { get; set; }
     
     [CommandArgument(1,"<aws-access-key>")]
     public string AwsAcessKey { get; set; }
+    
+    [Description("project-name must be unique across your aws account")]
+    [CommandArgument( 0,"<project-name>")]
+    public string Project { get; set; }
     
    
 }

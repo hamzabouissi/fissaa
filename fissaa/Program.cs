@@ -1,5 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using fissaa;
+using fissaa.commands.domain;
 using fissaa.commands.infrastructure;
 using fissaa.commands.storage;
 using Spectre.Console.Cli;
@@ -15,15 +16,19 @@ app.Configure(config =>
         infr.AddCommand<InfrastructureCloudformationDeployCommand>("deploy");
 
     });
-    
-    config.AddBranch("storage", infr =>
+    config.AddBranch<DomainSettings>("domain", command =>
     {
-        infr.AddBranch<StorageSettings>("db", storageInit =>
+        command.AddCommand<DomainCreateCommand>("create");
+        command.AddCommand<AddDomainHttps>("add-https");
+    });
+    config.AddBranch<StorageSettings>("storage", infr =>
+    {
+        infr.AddBranch("db", storageInit =>
         {
             storageInit.AddCommand<DatabaseInitCommand>("init");
             storageInit.AddCommand<DatabaseInitCommand>("destroy");
         });
-        infr.AddBranch<StorageSettings>("s3", storageInit =>
+        infr.AddBranch("s3", storageInit =>
         {
             storageInit.AddCommand<DatabaseInitCommand>("init");
             storageInit.AddCommand<DatabaseInitCommand>("destroy");

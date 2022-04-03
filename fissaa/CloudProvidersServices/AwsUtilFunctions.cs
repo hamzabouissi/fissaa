@@ -6,6 +6,8 @@ using Amazon.ECR;
 using Amazon.ECR.Model;
 using Amazon.ECS;
 using Amazon.ECS.Model;
+using Amazon.ElasticLoadBalancingV2;
+using Amazon.ElasticLoadBalancingV2.Model;
 using Amazon.Runtime;
 using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
@@ -22,6 +24,8 @@ public class AwsUtilFunctions
     public readonly AmazonCloudFormationClient ClientCformation;
     private readonly AmazonECSClient ClientEcs;
     public readonly AmazonSecurityTokenServiceClient StsClient;
+    public readonly AmazonElasticLoadBalancingV2Client ElasticLoadBalancingV2Client;
+
     public RegionEndpoint Region { get; set; } = RegionEndpoint.USEast1;
 
 
@@ -33,8 +37,10 @@ public class AwsUtilFunctions
         ClientEcr = new AmazonECRClient(credentials:auth,Region);
         StsClient = new AmazonSecurityTokenServiceClient(auth,Region);
         ClientCformation = new AmazonCloudFormationClient(auth,Region);
-        
+        ElasticLoadBalancingV2Client = new AmazonElasticLoadBalancingV2Client(auth, Region);
     }
+
+
     public async Task<StackStatus?> GetStackStatus(string stackName)
     {
         try
@@ -225,10 +231,7 @@ public class AwsUtilFunctions
         
         var imagesResponse = await ClientEcr.ListImagesAsync(request: new ListImagesRequest { RepositoryName = repo });
         if (imagesResponse.ImageIds.Count == 0)
-        {
-            Console.WriteLine("NO IMAGES");
             return;
-        }
         
         Console.WriteLine("DeleteEcrImages started....");
         var result = await ClientEcr.BatchDeleteImageAsync(new BatchDeleteImageRequest
@@ -236,9 +239,13 @@ public class AwsUtilFunctions
             ImageIds = imagesResponse.ImageIds,
             RepositoryName = repo
         });
-        Console.WriteLine(result.HttpStatusCode);
         result.Failures.ForEach(p=>Console.WriteLine(p.FailureReason));
-        
+        await ClientEcr.DeleteRepositoryAsync(new DeleteRepositoryRequest
+        {
+            Force = true,
+            RepositoryName = repo
+        });
+
     }
     
     public async Task CreateDockerfile(string projectType)
@@ -259,4 +266,36 @@ public class AwsUtilFunctions
         await File.WriteAllTextAsync("Dockerfile",dockerfileContent);
     }
 
+    public async Task<int> GetListenerRuleNextPriorityNumber(string stackName)
+    {
+        var stackDescribeResult = await ClientCformation.DescribeStacksAsync(new DescribeStacksRequest
+        {
+            StackName = stackName
+        });
+        var stack = stackDescribeResult.Stacks.First();
+        var listener = stack.Outputs.Single(o => o.OutputKey == "HttpsPublicListener");
+        var rulesResponse = await ElasticLoadBalancingV2Client.DescribeRulesAsync(new DescribeRulesRequest
+        {
+            ListenerArn = listener.OutputValue
+
+        });
+        var max = rulesResponse.Rules.Where(p=>p.Priority!="default").DefaultIfEmpty(new Rule(){Priority = "0"}).Max(p => int.Parse(p.Priority))+1;
+        return max;
+    }
+
+    public async Task CreateReposityIfNotExist(string reposityName)
+    {
+        Console.WriteLine("Create Repository");
+        try
+        {
+            await ClientEcr.CreateRepositoryAsync(new CreateRepositoryRequest
+            {
+                RepositoryName = reposityName,
+            });
+        }
+        catch (RepositoryAlreadyExistsException )
+        {
+           
+        }
+    }
 }

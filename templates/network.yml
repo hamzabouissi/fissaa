@@ -5,17 +5,10 @@ Description: >-
   subnets. Derived from a template at
   https://github.com/nathanpeck/aws-cloudformation-fargate.
 Parameters:
-  RepositoryName:
+  DomainCertificateStackName:
     Type: String
-    Description: The name of the repository.
-  Clustername:
-    Type: String
-    Description: The name of the Cluster.
+    Description: stack contains domains certificates
 Resources:
-  MyRepository:
-    Type: 'AWS::ECR::Repository'
-    Properties:
-      RepositoryName: !Ref RepositoryName
   VPC:
     Type: 'AWS::EC2::VPC'
     Properties:
@@ -88,34 +81,45 @@ Resources:
         - !Ref PublicSubnetTwo
       SecurityGroups:
         - !Ref PublicLoadBalancerSecurityGroup
-  DummyTargetGroupPublic:
-    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
-    DependsOn: GatewayAttachement
-    Properties:
-      HealthCheckIntervalSeconds: 6
-      HealthCheckPath: /
-      HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 5
-      HealthyThresholdCount: 2
-      Port: 80
-      Protocol: HTTP
-      UnhealthyThresholdCount: 2
-      VpcId: !Ref VPC
+
   PublicLoadBalancerListener:
     Type: 'AWS::ElasticLoadBalancingV2::Listener'
     DependsOn:
       - PublicLoadBalancer
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref DummyTargetGroupPublic
-          Type: forward
+        - Type: "redirect"
+          RedirectConfig:
+            Protocol: "HTTPS"
+            Port: "443"
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: "HTTP_301"
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 80
       Protocol: HTTP
+  
+  HttpsPublicLoadBalancerListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    DependsOn:
+      - PublicLoadBalancer
+    Properties:
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            ContentType: "text/html"
+            MessageBody: "Not Found"
+            StatusCode: 404
+      LoadBalancerArn: !Ref PublicLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn:
+            Fn::ImportValue: !Join [":", [!Ref "DomainCertificateStackName", "Certificate"]]
+  
   ECSCluster:
     Type: 'AWS::ECS::Cluster'
-    Properties:
-      ClusterName: !Ref Clustername
     
   ECSSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
@@ -198,6 +202,23 @@ Outputs:
     Value: !Ref ECSCluster
     Export:
       Name: !Join [":", [!Ref "AWS::StackName", "ClusterName"]]
+      
+  ElbDnsName:
+    Description: The url of the external load balancer
+    Value: !GetAtt PublicLoadBalancer.DNSName
+    Export:
+      Name: !Join
+        - ':'
+        - - !Ref 'AWS::StackName'
+          - ElbDnsName
+  ElbHostedZoneId:
+    Description: The url of the external load balancer
+    Value: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
+    Export:
+      Name: !Join
+        - ':'
+        - - !Ref 'AWS::StackName'
+          - ElbHostedZone
   ExternalUrl:
     Description: The url of the external load balancer
     Value: !Join 
@@ -233,6 +254,14 @@ Outputs:
         - ':'
         - - !Ref 'AWS::StackName'
           - PublicListener
+  HttpsPublicListener:
+    Description: The ARN of the public load balancer's Listener
+    Value: !Ref HttpsPublicLoadBalancerListener
+    Export:
+      Name: !Join
+        - ':'
+        - - !Ref 'AWS::StackName'
+          - HttpsPublicListener
   VPCId:
     Description: The ID of the VPC that this stack is deployed in
     Value: !Ref VPC

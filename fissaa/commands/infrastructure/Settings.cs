@@ -22,9 +22,7 @@ public class CommandSettings<T> : CommandSettings
 
 public class InfrastructureSettings : CommandSettings
 {
-    [Description("project-name must be unique across your aws account")]
-    [CommandArgument( 0,"<project-name>")]
-    public string Project { get; set; }
+    
     
     [CommandArgument(0,"<aws-secret-key>")]
     public string AwsSecretKey { get; set; }
@@ -38,42 +36,21 @@ public class InfrastructureSettings : CommandSettings
 
 public sealed class InfrastructureInitCommandSettings : InfrastructureSettings
 {
-    [CommandOption("--create-dockerfile")]
-    [DefaultValue(false)]
-    public bool CreateDockerfile { get; set; } = false;
-
-    [CommandOption("--project-type")] public string? ProjectType { get; set; } = null;
-
-    private readonly List<string> ProjectTypeChoices = new()
-    {
-        "Fastapi", "AspNetCore", "NodeJs",
-    };
-    public override ValidationResult Validate()
-    {
-        return string.IsNullOrEmpty(ProjectType) || ProjectTypeChoices.Exists(p => p == ProjectType)
-            ? ValidationResult.Success()
-            : ValidationResult.Error("--project-type choice is wrong");
-    }
+    [Description("domainName must the base , if you specifiy subdomain like sub.example.com, example.com will be considered as domain")]
+    [CommandOption("--domain")]
+    public string DomainName { get; set; }
    
-    public InfrastructureInitCommandSettings(bool createDockerfile,string projectType)
-    {
-        CreateDockerfile = createDockerfile;
-        if (createDockerfile && string.IsNullOrEmpty(projectType))
-        {
-            ProjectType = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("What's your Framework ?")
-                    .AddChoices(ProjectTypeChoices));
-        }
-        else
-            ProjectType = projectType;
-    
-    }
 }
 
 public sealed class InfrastructureDestroyCommandSettings : InfrastructureSettings
 {
+    [Description("project-name must be unique across your aws account")]
+    [CommandOption( "--project-name")]
+    public string Project { get; set; }
     
+    [CommandOption("--only-app")]
+    public bool? only_app { get; set; }
+
 }
 
 
@@ -81,9 +58,40 @@ public sealed class InfrastructureDestroyCommandSettings : InfrastructureSetting
 
 public sealed class InfrastructureDeployCommandSettings : InfrastructureSettings
 {
+    
+    [Description("project-name must be unique across your aws account")]
+    [CommandArgument( 0,"<project-name>")]
+    public string Project { get; set; }
+    
     [CommandOption("--dockerfile-path")]
     [DefaultValue("./")]
     public string DockerfilePath { get; set; }
    
+    [CommandOption("--domain")]
+    public string DomainName { get; set; }
+    
+    [CommandOption("--create-dockerfile")]
+    [DefaultValue(false)]
+    public bool CreateDockerfile { get; set; } = false;
+    [CommandOption("--project-type")] public string? ProjectType { get; set; } = null;
 
+    
+    public override ValidationResult Validate()
+    {
+        if (CreateDockerfile)
+        {
+            return ProjectTypeChoices.Exists(p => p == ProjectType)
+                ? ValidationResult.Success()
+                : ValidationResult.Error("--project-type choice is wrong");
+        }
+        return ValidationResult.Success();
+       
+    }
+    
+    private readonly List<string> ProjectTypeChoices = new()
+    {
+        "Fastapi", "AspNetCore", "NodeJs",
+    };
+    
+    
 }

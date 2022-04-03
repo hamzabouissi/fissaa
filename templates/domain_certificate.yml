@@ -1,0 +1,28 @@
+
+Parameters:
+  DomainName:
+    Type: String
+    Description: DomainName.
+  DnsHostedZoneId:
+    Type: String
+    Description: Dns Hosted Zone Id.
+
+Resources:
+  MyCertificate:
+    Type: "AWS::CertificateManager::Certificate"
+    Properties:
+      DomainName: !Ref "DomainName"
+      SubjectAlternativeNames:
+        - !Join [".",["*",!Ref "DomainName"]]
+      DomainValidationOptions:
+        - DomainName: !Ref "DomainName"
+          HostedZoneId: !Ref "DnsHostedZoneId"
+      ValidationMethod: DNS
+  
+Outputs:
+  Certificate:
+    Description: domain certificate
+    Value: !Ref "MyCertificate"
+    Export:
+      Name: !Join [ ":", [ !Ref "AWS::StackName", "Certificate" ] ]
+    

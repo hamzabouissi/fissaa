@@ -1,0 +1,26 @@
+
+Parameters:
+  DomainName:
+    Type: String
+    Description: DomainName.
+
+Resources:
+  DNS:
+    Type: "AWS::Route53::HostedZone"
+    Properties:
+      Name: !Ref "DomainName"
+  
+Outputs:
+  HostedZoneId:
+    Description:  The id of the Dns
+    Value: !Ref DNS
+    Export:
+      Name: !Join [ ":", [ !Ref "AWS::StackName", "HostedZoneId" ] ]
+
+  NameServers:
+    Description: The nameservers of the Dns
+    Value: !GetAtt DNS.NameServers
+    Export:
+      Name: !Join [ ":", [ !Ref "AWS::StackName", "NameServers" ] ]
+
+    
