@@ -12,47 +12,62 @@ namespace fissaa;
 
 public class AwsNetworkStack
 {
-    public AmazonCloudFormationClient ClientCformation { get; set; }
 
 
-    private string ProjectName { get; set; }
 
-    public string ServiceStackName => $"{ProjectName}-Service-Stack";
-    public string NetworkStackName => "network-stack";
-    public string ServiceName => $"{ProjectName}-Service";
-    public string ClusterName => $"App-Cluster";
-    public string RepoName => ProjectName;
+    private readonly string DomainName;
+    private readonly string BaseDomain;
+    private readonly string EscapedBaseDomain;
+    private readonly string EscapedDomain;
+
+    public string DomainCertificateStackName=>$"{EscapedBaseDomain}-certificate-stack";
+    public string NetworkStackName => $"{EscapedBaseDomain}-network-stack";
+    public string ServiceStackName => $"{EscapedDomain}-Service-Stack";
+    public string ServiceName => $"{EscapedDomain}-Service";
+    public string RepoName => EscapedDomain;
     public readonly RegionEndpoint Region = RegionEndpoint.USEast1;
+    public readonly AmazonCloudFormationClient ClientCformation;
     private readonly AwsDomainService domainServices;
-    public AwsUtilFunctions awsUtilFunctions { get; set; }
-    public AwsNetworkStack(string awsSecretKey,string awsAccessKey, string projectName)
+    public readonly AwsUtilFunctions awsUtilFunctions;
+
+    public AwsNetworkStack(string awsSecretKey,string awsAccessKey, string domainName)
     {
         var auth = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
         ClientCformation = new AmazonCloudFormationClient(auth,Region);
-        awsUtilFunctions = new AwsUtilFunctions(awsSecretKey, awsAccessKey, projectName);
+        awsUtilFunctions = new AwsUtilFunctions(awsSecretKey, awsAccessKey, domainName);
         domainServices = new AwsDomainService(awsSecretKey, awsAccessKey);
-        ProjectName = projectName;
+        DomainName = domainName;
+        BaseDomain = string.Join(".",DomainName.Split(".")[^2..]);
+        EscapedBaseDomain = string.Join("-",DomainName.Split(".")[^2..]);
+        EscapedDomain = DomainName.Replace(".", "-");
     }
     
-
+    
     #region Cloudformation
-    public async Task CloudformationInit(string domain)
+    public async Task<StackStatus?> CloudformationInit()
     {
         
-        var baseDomain = string.Join("-",domain.Split(".")[^2..]);
         var cloudFile = await awsUtilFunctions.ExtractTextFromRemoteFile("https://fissaa-cli.s3.amazonaws.com/test/network.yml");
+        var domainStackStatus = await awsUtilFunctions.GetStackStatus(DomainCertificateStackName);
+        if (domainStackStatus is null || domainStackStatus != StackStatus.CREATE_COMPLETE)
+        {
+            Console.WriteLine("Creating Https Certificate...");
+            var addHttps = await domainServices.AddHttps(BaseDomain);
+            if (addHttps is null || addHttps != StackStatus.CREATE_COMPLETE)
+                return addHttps;
+        }
         var parameters = new List<Parameter>()
         {
             new ()
             {
                 ParameterKey = "DomainCertificateStackName",
-                ParameterValue = $"{baseDomain}-certificate-stack",
+                ParameterValue = DomainCertificateStackName,
             }
         };
         
         try
         {
-            
+            Console.WriteLine("Create Network Stack...");
             var response = await ClientCformation.CreateStackAsync(new CreateStackRequest
             {
                 OnFailure = OnFailure.DELETE,
@@ -65,25 +80,19 @@ public class AwsNetworkStack
                 TemplateBody = cloudFile,
                 TimeoutInMinutes = 5
             });
-            
+            await awsUtilFunctions.DisplayResourcesStatus(NetworkStackName);
         }
         catch (AlreadyExistsException)
         {
-            Console.WriteLine("Update stack...");
-            await ClientCformation.UpdateStackAsync(new UpdateStackRequest
-            {
-            
-                DisableRollback = false,
-                StackName = NetworkStackName,
-                UsePreviousTemplate = true
-            });
+          Console.WriteLine("Network Stack Already Created");
         }
-        await awsUtilFunctions.DisplayResourcesStatus(NetworkStackName);
+
+        var stackStatus = await awsUtilFunctions.GetStackStatus(NetworkStackName);
+        return stackStatus;
+
     }
     public async Task CloudformationDestroy(bool only_app=false)
     {
-        
-        // await AwsUtilFunctions.DeleteService(ClusterName, ServiceName);
         await awsUtilFunctions.DeleteStack(ServiceStackName);
         await awsUtilFunctions.DeleteEcrImages(RepoName);
         if (!only_app)
@@ -91,23 +100,21 @@ public class AwsNetworkStack
         // await DisplayResourcesStatus(MainStackName);
     }
     
-    public async Task CloudformationDeploy(bool createDockerfile,string? projectType, string dockerfile, string domainName)
+    public async Task CloudformationDeploy(bool createDockerfile,string? projectType, string dockerfile)
     {
+        var baseDomain = string.Join(".",DomainName.Split(".")[^2..]);
+        var hostedZoneId = await domainServices.GetHostedZoneId(baseDomain);
+
+        var status = await CloudformationInit();
+        if (status is null ||  (status != StackStatus.CREATE_COMPLETE && status!=StackStatus.UPDATE_COMPLETE))
+            return;
+        
         if (createDockerfile && projectType is not null)
             await awsUtilFunctions.CreateDockerfile(projectType);
-        if (string.IsNullOrEmpty(domainName))
-        {
-            Console.WriteLine($"{ProjectName} will be considered as subdomain");
-            domainName = ProjectName;
-        }
-        await awsUtilFunctions.CreateReposityIfNotExist(RepoName);
-        var (image,registry) = await awsUtilFunctions.BuildImage(dockerfile,RepoName);
-        var password = await awsUtilFunctions.DecodeRegistryLoginTokenToPassword();
-        await AwsUtilFunctions.LoginToRegistry(password,registry);
-        await awsUtilFunctions.DeployImageToEcr(image);
-
-        var baseDomain = string.Join(".",domainName.Split(".")[^2..]);
-        var hostedZoneId = await domainServices.GetHostedZoneId(baseDomain);
+        
+        
+        var image = await ImageDeployment(dockerfile);
+        
         var cloudFile = await awsUtilFunctions.ExtractTextFromRemoteFile("https://fissaa-cli.s3.amazonaws.com/test/service.yml");
         var priorityNumber = await awsUtilFunctions.GetListenerRuleNextPriorityNumber(NetworkStackName);
         var parameters = new List<Parameter>()
@@ -150,7 +157,7 @@ public class AwsNetworkStack
            new()
            { 
                ParameterKey = "Domain",
-               ParameterValue = domainName,
+               ParameterValue = DomainName,
            },
            new()
            {
@@ -160,6 +167,7 @@ public class AwsNetworkStack
         };
         try
         {
+            Console.WriteLine("Creating App stack");
             var response = await ClientCformation.CreateStackAsync(new CreateStackRequest
             {
                 OnFailure = OnFailure.DELETE,
@@ -168,7 +176,6 @@ public class AwsNetworkStack
                 TemplateBody = cloudFile,
                 TimeoutInMinutes = 5,
             });
-            
         }
         catch (AlreadyExistsException )
         {
@@ -185,5 +192,13 @@ public class AwsNetworkStack
     }
 
     #endregion
-   
+    private async Task<string> ImageDeployment(string dockerfile)
+    {
+        await awsUtilFunctions.CreateReposityIfNotExist(RepoName);
+        var (image, registry) = await awsUtilFunctions.BuildImage(dockerfile, RepoName);
+        var password = await awsUtilFunctions.DecodeRegistryLoginTokenToPassword();
+        await AwsUtilFunctions.LoginToRegistry(password, registry);
+        await awsUtilFunctions.DeployImageToEcr(image);
+        return image;
+    }
 }

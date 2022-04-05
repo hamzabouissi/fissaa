@@ -30,23 +30,20 @@ public class InfrastructureSettings : CommandSettings
     [CommandArgument(1,"<aws-access-key>")]
     public string AwsAcessKey { get; set; }
     
+    [Description("domainName must the base , if you specifiy subdomain like sub.example.com, example.com will be considered as domain")]
+    [CommandArgument(1,"<domain>")]
+    public string DomainName { get; set; }
 
 }
 
 
 public sealed class InfrastructureInitCommandSettings : InfrastructureSettings
 {
-    [Description("domainName must the base , if you specifiy subdomain like sub.example.com, example.com will be considered as domain")]
-    [CommandOption("--domain")]
-    public string DomainName { get; set; }
    
 }
 
 public sealed class InfrastructureDestroyCommandSettings : InfrastructureSettings
 {
-    [Description("project-name must be unique across your aws account")]
-    [CommandOption( "--project-name")]
-    public string Project { get; set; }
     
     [CommandOption("--only-app")]
     public bool? only_app { get; set; }
@@ -59,17 +56,11 @@ public sealed class InfrastructureDestroyCommandSettings : InfrastructureSetting
 public sealed class InfrastructureDeployCommandSettings : InfrastructureSettings
 {
     
-    [Description("project-name must be unique across your aws account")]
-    [CommandArgument( 0,"<project-name>")]
-    public string Project { get; set; }
     
     [CommandOption("--dockerfile-path")]
     [DefaultValue("./")]
     public string DockerfilePath { get; set; }
    
-    [CommandOption("--domain")]
-    public string DomainName { get; set; }
-    
     [CommandOption("--create-dockerfile")]
     [DefaultValue(false)]
     public bool CreateDockerfile { get; set; } = false;

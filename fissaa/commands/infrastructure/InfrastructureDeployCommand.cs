@@ -6,7 +6,7 @@ public class InfrastructureDeployCommand:AsyncCommand<InfrastructureDeployComman
 {
     public override async Task<int> ExecuteAsync(CommandContext context, InfrastructureDeployCommandSettings settings)
     {
-        var stack = new AWSoldStack(settings.AwsSecretKey,settings.AwsAcessKey,settings.Project);
+        var stack = new AWSoldStack(settings.AwsSecretKey,settings.AwsAcessKey,settings.DomainName);
         await stack.Deploy(settings.DockerfilePath);
         return 0;
     }

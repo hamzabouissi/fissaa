@@ -32,9 +32,16 @@ public class AwsDomainService
     public async Task CreateDomain(string domainName)
     {
         Console.WriteLine("Create Hosted Zone...");
-        var response = await route53Client.CreateHostedZoneAsync(new CreateHostedZoneRequest
+        var domainNameExist = await DomainNameExist(domainName);
+        if (domainNameExist)
+        {
+            throw new ArgumentException("domain already Created");
+        }
+        var response = await route53Client.CreateHostedZoneAsync(new CreateHostedZoneRequest()
         {
             Name = domainName,
+            CallerReference = Guid.NewGuid().ToString()
+           
         });
         Console.WriteLine("NameServers: ");
         response.DelegationSet.NameServers.ForEach(Console.WriteLine);
@@ -42,6 +49,14 @@ public class AwsDomainService
         Console.WriteLine("Wait Until dns propagation work, means your dns provider recognize those nameservers, it may take 24h Max");
     }
 
+    private async Task<bool> DomainNameExist(string domainName)
+    {
+        var zonesByNameResponse = await route53Client.ListHostedZonesByNameAsync(new ListHostedZonesByNameRequest
+        {
+            DNSName = domainName,
+        });
+        return zonesByNameResponse.HostedZones.Count >= 1;
+    }
     public async Task<string> GetHostedZoneId(string domainName)
     {
         var listHostedZonesByNameResponse=  await route53Client.ListHostedZonesByNameAsync(new ListHostedZonesByNameRequest
@@ -54,7 +69,7 @@ public class AwsDomainService
         return domain.Id.Split("/")[^1];
     }
 
-    public async Task AddHttps(string domainName)
+    public async Task<StackStatus?> AddHttps(string domainName)
     {
         Console.WriteLine("Creating Https Certificate Started.....");
         var cloudFile = await awsUtilFunctions.ExtractTextFromRemoteFile("https://fissaa-cli.s3.amazonaws.com/test/domain_certificate.yml");
@@ -82,5 +97,6 @@ public class AwsDomainService
             TimeoutInMinutes = 30
         });
         await awsUtilFunctions.DisplayResourcesStatus(stackName);
+        return await awsUtilFunctions.GetStackStatus(stackName);
     }
 }

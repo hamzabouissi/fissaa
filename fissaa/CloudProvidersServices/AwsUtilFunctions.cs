@@ -76,7 +76,7 @@ public class AwsUtilFunctions
             var eventsResponse = await ClientCformation.DescribeStackResourcesAsync(new DescribeStackResourcesRequest()
             {
                 StackName = stackName
-            });
+            });//todo
             foreach (var resource in eventsResponse.StackResources)
                 Console.WriteLine($"{resource.ResourceType}, status = {resource.ResourceStatus}");
 
@@ -240,6 +240,7 @@ public class AwsUtilFunctions
             RepositoryName = repo
         });
         result.Failures.ForEach(p=>Console.WriteLine(p.FailureReason));
+        Console.WriteLine("DeletingEcrRepo started...");
         await ClientEcr.DeleteRepositoryAsync(new DeleteRepositoryRequest
         {
             Force = true,
