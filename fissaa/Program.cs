@@ -3,18 +3,28 @@ using fissaa;
 using fissaa.commands.domain;
 using fissaa.commands.infrastructure;
 using fissaa.commands.storage;
+using Spectre.Console;
 using Spectre.Console.Cli;
 
 var app = new CommandApp();
+
+
 app.Configure(config =>
 {
     config.AddBranch<InfrastructureSettings>("infrastructure", infr =>
     {
         
-        infr.AddCommand<InfrastructureCloudformationInitCommand>("init");
-        infr.AddCommand<InfrastructureCloudformationDestroyCommand>("destroy");
-        infr.AddCommand<InfrastructureCloudformationDeployCommand>("deploy");
-
+        infr.AddCommand<NetworkCreateCommand>("init");
+        infr.AddCommand<AppDestroyCommand>("destroy");
+        infr.AddCommand<AppCreateCommand>("deploy");
+        infr.AddCommand<AppLogsCommand>("logs");
+        infr.AddCommand<AppLogsCommand>("rollback");
+        
+    });
+    config.AddBranch<BudgetSettings>("budget", budg =>
+    {
+        budg.AddCommand<BudgetCreateCommand>("create");
+        budg.AddCommand<BudgetDeleteCommand>("delete");
     });
     config.AddBranch<DomainSettings>("domain", command =>
     {
@@ -37,5 +47,4 @@ app.Configure(config =>
     });
 });
 return await app.RunAsync(args);
-
 

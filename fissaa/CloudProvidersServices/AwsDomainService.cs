@@ -1,13 +1,12 @@
 using Amazon;
-using Amazon.ACMPCA;
-using Amazon.ACMPCA.Model;
 using Amazon.CertificateManager;
-using Amazon.CertificateManager.Model;
 using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
 using Amazon.Route53;
 using Amazon.Route53.Model;
 using Amazon.Runtime;
+using CSharpFunctionalExtensions;
+using Tag = Amazon.CloudFormation.Model.Tag;
 using Task = System.Threading.Tasks.Task;
 
 namespace fissaa;
@@ -69,13 +68,20 @@ public class AwsDomainService
         return domain.Id.Split("/")[^1];
     }
 
-    public async Task<StackStatus?> AddHttps(string domainName)
+    public async Task<Result<StackStatus?>> AddHttps(string domainName)
     {
-        Console.WriteLine("Creating Https Certificate Started.....");
+        
         var cloudFile = await awsUtilFunctions.ExtractTextFromRemoteFile("https://fissaa-cli.s3.amazonaws.com/test/domain_certificate.yml");
-        var hostedZoneId = await GetHostedZoneId(domainName);
-        var domain_for_stack = domainName.Replace(".", "-");   
+        var baseDomain = string.Join(".",domainName.Split(".")[^2..]); 
+        
+        var hostedZoneId = await GetHostedZoneId(baseDomain);
+        var domain_for_stack = baseDomain.Replace(".", "-");   
         var stackName = $"{domain_for_stack}-certificate-stack";
+        
+        var status = await awsUtilFunctions.GetStackStatus(stackName);
+        if (awsUtilFunctions.StackStatusIsSuccessfull(status))
+            return Result.Success(status);
+        
         await clientCformation.CreateStackAsync(new CreateStackRequest
         {
             OnFailure = OnFailure.DELETE,
@@ -84,7 +90,7 @@ public class AwsDomainService
                 new()
                 {
                     ParameterKey = "DomainName",
-                    ParameterValue = domainName,
+                    ParameterValue = baseDomain,
                 },
                 new()
                 {
@@ -94,9 +100,18 @@ public class AwsDomainService
             },
             StackName = stackName,
             TemplateBody = cloudFile,
-            TimeoutInMinutes = 30
+            TimeoutInMinutes = 30,
+            Tags = new List<Tag>()
+            {
+                new Tag
+                {
+                    Key = "app-domain",
+                    Value = baseDomain
+                }
+            } 
         });
-        await awsUtilFunctions.DisplayResourcesStatus(stackName);
-        return await awsUtilFunctions.GetStackStatus(stackName);
+        await awsUtilFunctions.WaitUntilStackCreatedOrDeleted(stackName);
+        status = await awsUtilFunctions.GetStackStatus(stackName);
+        return awsUtilFunctions.StackStatusIsSuccessfull(status) ? Result.Success(status): Result.Failure<StackStatus>("creating https failed") ;
     }
 }

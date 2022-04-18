@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -31,18 +32,44 @@ public class InfrastructureSettings : CommandSettings
     public string AwsAcessKey { get; set; }
     
     [Description("domainName must the base , if you specifiy subdomain like sub.example.com, example.com will be considered as domain")]
-    [CommandArgument(1,"<domain>")]
+    [CommandArgument(2,"<domain>")]
     public string DomainName { get; set; }
 
 }
 
 
-public sealed class InfrastructureInitCommandSettings : InfrastructureSettings
+public sealed class NetworkCreateCommandSettings : InfrastructureSettings
 {
-   
 }
 
-public sealed class InfrastructureDestroyCommandSettings : InfrastructureSettings
+public sealed class AppLogsommandSettings : InfrastructureSettings
+{
+    [Description("format M/dd/yyyy hh:mm")]
+    [CommandOption("--start-date")]
+    public string StartDate { get; set; } =(DateTime.Now-TimeSpan.FromMinutes(15)).ToString("M/dd/yyyy hh:mm");
+
+    [CommandOption("--hour")] public int Hour { get; set; } = 1;
+
+
+    public override ValidationResult Validate()
+    {
+        var parsed = DateTime.TryParseExact(StartDate, formats,null,
+            System.Globalization.DateTimeStyles.AllowWhiteSpaces |
+            System.Globalization.DateTimeStyles.AdjustToUniversal,out var parsedStartDate);
+        if (!parsed)
+            return ValidationResult.Error("--start-date isn't valid");
+        if (Hour>5 || Hour <0)
+            return ValidationResult.Error("--hour range 0,5");
+        return ValidationResult.Success();
+    }
+
+    public readonly string[] formats = 
+    {
+        "M/dd/yyyy hh:mm"
+    };
+}
+
+public sealed class AppDestroyCommandSettings : InfrastructureSettings
 {
     
     [CommandOption("--only-app")]
@@ -50,10 +77,7 @@ public sealed class InfrastructureDestroyCommandSettings : InfrastructureSetting
 
 }
 
-
-
-
-public sealed class InfrastructureDeployCommandSettings : InfrastructureSettings
+public sealed class AppCreateCommandSettings : InfrastructureSettings
 {
     
     
@@ -69,6 +93,9 @@ public sealed class InfrastructureDeployCommandSettings : InfrastructureSettings
     
     public override ValidationResult Validate()
     {
+        var validationResult = base.Validate();
+        if (!validationResult.Successful)
+            return validationResult;
         if (CreateDockerfile)
         {
             return ProjectTypeChoices.Exists(p => p == ProjectType)
@@ -86,3 +113,4 @@ public sealed class InfrastructureDeployCommandSettings : InfrastructureSettings
     
     
 }
+

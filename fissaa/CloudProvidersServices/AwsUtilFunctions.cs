@@ -1,3 +1,4 @@
+using System.Buffers.Text;
 using Amazon;
 using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
@@ -40,12 +41,16 @@ public class AwsUtilFunctions
         ElasticLoadBalancingV2Client = new AmazonElasticLoadBalancingV2Client(auth, Region);
     }
 
+    public bool StackStatusIsSuccessfull(StackStatus? status)
+    {
+        return status is not null && status == StackStatus.CREATE_COMPLETE;
+    }
 
     public async Task<StackStatus?> GetStackStatus(string stackName)
     {
         try
         {
-            var stacksResponse =await ClientCformation.DescribeStacksAsync(new DescribeStacksRequest
+            var stacksResponse = await ClientCformation.DescribeStacksAsync(new DescribeStacksRequest
             {
                 StackName = stackName
             });
@@ -93,28 +98,43 @@ public class AwsUtilFunctions
             
         }
     }
+    public async Task WaitUntilStackCreatedOrDeleted(string stackName)
+    {
+        var endStatus = new List<StackStatus>()
+        {
+            StackStatus.DELETE_COMPLETE,
+            StackStatus.DELETE_FAILED,
+            StackStatus.CREATE_COMPLETE,
+            StackStatus.CREATE_FAILED,
+            StackStatus.UPDATE_COMPLETE,
+            StackStatus.UPDATE_FAILED
+        };
+        
+        var stackStatus = await GetStackStatus(stackName);
+        while (stackStatus!=null && !endStatus.Exists(x=>x ==stackStatus))
+        {
+            stackStatus = await GetStackStatus(stackName);
+            Thread.Sleep(5000);
+        }
+    }
     public async Task<DeleteStackResponse?> DeleteStack(string stackName)
     {
         try
         {
-            Console.WriteLine($"Delete Stack {stackName}");
             var deleteServiceStackResponse = await ClientCformation.DeleteStackAsync(new DeleteStackRequest
             {
                 StackName = stackName
             });
             var stackStatus = await GetStackStatus(stackName);
-            Console.WriteLine("Deleting Stack On Progress");
             while (stackStatus != null && stackStatus != StackStatus.DELETE_COMPLETE)
             {
                 Thread.Sleep(5);
                 stackStatus = await GetStackStatus(stackName);
             }
-            Console.WriteLine("Deleting Stack Completed");
             return deleteServiceStackResponse;
         }
         catch (StackNotFoundException)
         {
-            Console.WriteLine($"No Stack {stackName}....");
             return null;
         }
                 
@@ -164,9 +184,9 @@ public class AwsUtilFunctions
     
     public async Task<(string imageName, string registry)> BuildImage(string dockerfile,string RepoName)
     {
-        Console.WriteLine("BuildImage started");
         var accountId = await GetAccountId();
-        var tag = Guid.NewGuid().ToString();
+        var dateNow = DateTimeOffset.Parse(DateTime.Now.ToString());
+        var tag = dateNow.ToUnixTimeMilliseconds();
         var registry = GetRegistry(accountId);
         var imageName = $"{registry}/{RepoName}:{tag}";
         var result = await Cli.Wrap("docker")
@@ -194,7 +214,6 @@ public class AwsUtilFunctions
 
     public static async Task LoginToRegistry(string decodeToken, string registry)
     {
-        Console.WriteLine("RegistryLogin started");
         var result = await Cli.Wrap("docker")
             .WithArguments(args => args
                 .Add("login")
@@ -210,7 +229,6 @@ public class AwsUtilFunctions
 
     public async Task DeployImageToEcr(string imageName)
     {
-        Console.WriteLine("DeployImageToEcr started...");
         var result = await Cli.Wrap("docker")
             .WithArguments(args => args
                 .Add("push")
@@ -219,12 +237,7 @@ public class AwsUtilFunctions
             .WithValidation(CommandResultValidation.ZeroExitCode)
             .ExecuteBufferedAsync();
         var stdOut = result.StandardOutput;
-        var stdErr = result.StandardError;
-        // if (stdErr.Length>0)
-        // {
-        //     throw new SystemException(stdErr);
-        // }
-        Console.WriteLine(stdOut);
+     
     }
     public async Task DeleteEcrImages(string repo)
     {
@@ -233,14 +246,12 @@ public class AwsUtilFunctions
         if (imagesResponse.ImageIds.Count == 0)
             return;
         
-        Console.WriteLine("DeleteEcrImages started....");
         var result = await ClientEcr.BatchDeleteImageAsync(new BatchDeleteImageRequest
         {
             ImageIds = imagesResponse.ImageIds,
             RepositoryName = repo
         });
         result.Failures.ForEach(p=>Console.WriteLine(p.FailureReason));
-        Console.WriteLine("DeletingEcrRepo started...");
         await ClientEcr.DeleteRepositoryAsync(new DeleteRepositoryRequest
         {
             Force = true,
@@ -286,7 +297,7 @@ public class AwsUtilFunctions
 
     public async Task CreateReposityIfNotExist(string reposityName)
     {
-        Console.WriteLine("Create Repository");
+       
         try
         {
             await ClientEcr.CreateRepositoryAsync(new CreateRepositoryRequest

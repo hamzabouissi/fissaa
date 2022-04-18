@@ -15,7 +15,7 @@ Parameters:
     Description: Path to perform the healthcheck on each instance.
   HealthCheckIntervalSeconds:
     Type: Number
-    Default: 5
+    Default: 180
     Description: Number of seconds to wait between each health check.
   ImageUrl:
     Type: String
@@ -43,21 +43,29 @@ Parameters:
   Priority:
     Type: Number
   
-
 Resources:
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     DependsOn: myLogGroup
     Properties:
       Family: !Ref "ServiceName"
-      Cpu: !Ref "ContainerCpu"
-      Memory: !Ref "ContainerMemory"
+      Cpu: 512
+      Memory: 2048
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
       ExecutionRoleArn:
         Fn::ImportValue: !Join [":", [!Ref "StackName", "ECSTaskExecutionRole"]]
+      TaskRoleArn:
+        Fn::ImportValue: !Join [ ":", [ !Ref "StackName", "ECSTaskExecutionRole" ] ]
       ContainerDefinitions:
+        - Name: xray-daemon
+          Image: amazon/aws-xray-daemon
+          Cpu: 32
+          MemoryReservation: 256
+          PortMappings:
+            - ContainerPort: 2000
+              Protocol: udp
         - Name: !Ref "ServiceName"
           Cpu: !Ref "ContainerCpu"
           Memory: !Ref "ContainerMemory"
@@ -70,6 +78,7 @@ Resources:
               awslogs-group: !Ref myLogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: !Ref "ServiceName"
+          
 
   myLogGroup: 
     Type: AWS::Logs::LogGroup
@@ -86,6 +95,9 @@ Resources:
         Fn::ImportValue: !Join [":", [!Ref "StackName", "ClusterName"]]
       LaunchType: FARGATE
       DeploymentConfiguration:
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
         MaximumPercent: 200
         MinimumHealthyPercent: 50
       DesiredCount: !Ref "DesiredCount"
@@ -105,7 +117,7 @@ Resources:
         - ContainerName: !Ref "ServiceName"
           ContainerPort: !Ref "ContainerPort"
           TargetGroupArn: !Ref "TargetGroup"
-        
+      EnableExecuteCommand: true        
        
 
   TargetGroup:
@@ -117,7 +129,6 @@ Resources:
       HealthCheckTimeoutSeconds: 20
       HealthyThresholdCount: 2
       TargetType: ip
-      Name: !Join [ "", [ "Https", !Ref "ServiceName" ] ]
       Port: 80
       Protocol: HTTP
       UnhealthyThresholdCount: 2
