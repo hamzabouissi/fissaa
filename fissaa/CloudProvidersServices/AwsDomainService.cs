@@ -36,6 +36,7 @@ public class AwsDomainService
         {
             throw new ArgumentException("domain already Created");
         }
+
         var response = await route53Client.CreateHostedZoneAsync(new CreateHostedZoneRequest()
         {
             Name = domainName,
@@ -53,8 +54,9 @@ public class AwsDomainService
         var zonesByNameResponse = await route53Client.ListHostedZonesByNameAsync(new ListHostedZonesByNameRequest
         {
             DNSName = domainName,
+            MaxItems = "1"
         });
-        return zonesByNameResponse.HostedZones.Count >= 1;
+        return zonesByNameResponse.HostedZones.First().Name[..^1] == domainName;
     }
     public async Task<string> GetHostedZoneId(string domainName)
     {

@@ -114,6 +114,7 @@ public class AwsUtilFunctions
         while (stackStatus!=null && !endStatus.Exists(x=>x ==stackStatus))
         {
             stackStatus = await GetStackStatus(stackName);
+            Console.WriteLine(stackStatus?.Value);
             Thread.Sleep(5000);
         }
     }

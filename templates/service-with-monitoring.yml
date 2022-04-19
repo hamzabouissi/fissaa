@@ -5,7 +5,7 @@ Parameters:
       these resources are put into.
   HostedZoneId:
     Type: String
-    Description: name of domain stack 
+    Description: name of domain stack
   ServiceName:
     Type: String
     Description: A human-readable name for the service.
@@ -42,7 +42,7 @@ Parameters:
     Description: How many copies of the service task to run.
   Priority:
     Type: Number
-  
+
 Resources:
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -59,6 +59,13 @@ Resources:
       TaskRoleArn:
         Fn::ImportValue: !Join [ ":", [ !Ref "StackName", "ECSTaskExecutionRole" ] ]
       ContainerDefinitions:
+        - Name: xray-daemon
+          Image: amazon/aws-xray-daemon
+          Cpu: 32
+          MemoryReservation: 256
+          PortMappings:
+            - ContainerPort: 2000
+              Protocol: udp
         - Name: !Ref "ServiceName"
           Cpu: !Ref "ContainerCpu"
           Memory: !Ref "ContainerMemory"
@@ -71,9 +78,9 @@ Resources:
               awslogs-group: !Ref myLogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: !Ref "ServiceName"
-          
-
-  myLogGroup: 
+  
+  
+  myLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Ref "ServiceName"
@@ -110,9 +117,9 @@ Resources:
         - ContainerName: !Ref "ServiceName"
           ContainerPort: !Ref "ContainerPort"
           TargetGroupArn: !Ref "TargetGroup"
-      EnableExecuteCommand: true        
-       
-
+      EnableExecuteCommand: true
+  
+  
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -138,11 +145,11 @@ Resources:
           HostHeaderConfig:
             Values:
               - !Join [".", ["www", !Ref "Domain"]]
-              - !Ref "Domain"  
+              - !Ref "Domain"
       ListenerArn:
         Fn::ImportValue: !Join [":", [!Ref "StackName", "HttpsPublicListener"]]
       Priority: !Ref "Priority"
-      
+  
   DomainRecordSetGroup:
     Type: AWS::Route53::RecordSetGroup
     Properties:
@@ -153,5 +160,5 @@ Resources:
           AliasTarget:
             DNSName:
               Fn::ImportValue: !Join [":", [!Ref "StackName", "ElbDnsName"]]
-            HostedZoneId: 
+            HostedZoneId:
               Fn::ImportValue: !Join [":", [!Ref "StackName", "ElbHostedZone"]]

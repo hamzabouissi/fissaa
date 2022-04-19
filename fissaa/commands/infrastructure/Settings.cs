@@ -71,15 +71,17 @@ public sealed class AppLogsommandSettings : InfrastructureSettings
 
 public sealed class AppDestroyCommandSettings : InfrastructureSettings
 {
-    
-    [CommandOption("--only-app")]
-    public bool? only_app { get; set; }
+
+    [CommandOption("--all")] public bool All { get; set; } = false;
 
 }
 
 public sealed class AppCreateCommandSettings : InfrastructureSettings
 {
-    
+
+    [CommandOption("--add-monitor")]
+    [DefaultValue(false)]
+    public bool AddMonitor { get; set; } = false;
     
     [CommandOption("--dockerfile-path")]
     [DefaultValue("./")]

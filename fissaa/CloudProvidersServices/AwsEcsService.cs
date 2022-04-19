@@ -56,8 +56,10 @@ public class AwsEcsService
         await awsUtilFunctions.DeleteEcrImages(RepoName);
     }
     
-    public async Task<Result<StackStatus>> Create(bool createDockerfile,string? projectType, string dockerfile)
+    public async Task<Result<StackStatus>> Create(bool createDockerfile, string? projectType, string dockerfile,
+        bool addMonitor)
     {
+        string cloudFile;
 
         var baseDomain = string.Join(".",DomainName.Split(".")[^2..]);
         var hostedZoneId = await domainServices.GetHostedZoneId(baseDomain);
@@ -67,8 +69,13 @@ public class AwsEcsService
         
         var image = await ImageDeployment(dockerfile);
         // var image = "182476924183.dkr.ecr.us-east-1.amazonaws.com/django-jooddevops-xyz:1650044588000";
-        
-        var cloudFile = await awsUtilFunctions.ExtractTextFromRemoteFile("https://fissaa-cli.s3.amazonaws.com/test/service.yml");
+        if (addMonitor)
+        {
+       
+            cloudFile = await awsUtilFunctions.ExtractTextFromRemoteFile("https://fissaa-cli.s3.amazonaws.com/test/service-with-monitoring.yml");    
+        }
+        else
+            cloudFile = await awsUtilFunctions.ExtractTextFromRemoteFile("https://fissaa-cli.s3.amazonaws.com/test/service.yml");
         var priorityNumber = await awsUtilFunctions.GetListenerRuleNextPriorityNumber(NetworkStackName);
         var parameters = new List<Parameter>()
         {
@@ -143,11 +150,19 @@ public class AwsEcsService
         Console.WriteLine("Waiting Stack");
         await awsUtilFunctions.WaitUntilStackCreatedOrDeleted(ServiceStackName);
         var status = await awsUtilFunctions.GetStackStatus(ServiceStackName);
-        Console.WriteLine($"status {awsUtilFunctions.StackStatusIsSuccessfull(status)}");
+        AddInfoFile(addMonitor);
         return awsUtilFunctions.StackStatusIsSuccessfull(status) ? Result.Success(status): Result.Failure<StackStatus>("creating app failed") ;
         
     }
 
+    public void AddInfoFile(bool addMonitor)
+    {
+        Directory.CreateDirectory("./.fissaa");
+        var info = $"ServiceMap https://us-east-1.console.aws.amazon.com/cloudwatch/home?region={Region.SystemName}#xray:service-map/map\n";
+        File.WriteAllText("./.fissaa/links",info);
+        info = $"HttpRequestTraces https://us-east-1.console.aws.amazon.com/cloudwatch/home?region={Region.SystemName}#xray:traces/query\n";
+        File.AppendAllText("./.fissaa/links", info);
+    }
     public async Task ListLogs(string startDate,int hour)
     {
         try
@@ -208,5 +223,10 @@ public class AwsEcsService
         await awsUtilFunctions.DeployImageToEcr(image);
         Console.WriteLine("Deploy Image Ended");
         return image;
+    }
+
+    public async Task<Result> RollBack()
+    {
+        return Result.Success();
     }
 }

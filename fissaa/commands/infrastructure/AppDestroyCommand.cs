@@ -16,7 +16,7 @@ public class AppDestroyCommand:AsyncCommand<AppDestroyCommandSettings>
             .StartAsync("Deleting App Started", async ctx =>
             {
                 await appService.Destroy();
-                if (settings.only_app is null)
+                if (settings.All)
                 {
                     ctx.Status("Deleting Network ");
                     await networkService.Destroy();

@@ -83,7 +83,7 @@ public class AwsBudgetService
         await budgetsClient.DeleteBudgetAsync(new DeleteBudgetRequest
         {
             AccountId = acountId,
-            BudgetName = domainName
+            BudgetName = $"{domainName}-cost",
         });
         return Result.Success();
     }

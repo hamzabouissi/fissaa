@@ -7,6 +7,7 @@ public class AppRollbackCommand:AsyncCommand<AppCreateCommandSettings>
     public override async Task<int> ExecuteAsync(CommandContext context, AppCreateCommandSettings settings)
     {
         var appService = new AwsEcsService(settings.AwsSecretKey,settings.AwsAcessKey,settings.DomainName);
+        await appService.RollBack();
         return 0;
     }
 }

@@ -13,7 +13,15 @@ public class AppCreateCommand:AsyncCommand<AppCreateCommandSettings>
         var domainService = new AwsDomainService(settings.AwsSecretKey,settings.AwsAcessKey);
         var networkService = new AwsNetworkService(settings.AwsSecretKey, settings.AwsAcessKey,settings.DomainName);
         var appService = new AwsEcsService(settings.AwsSecretKey,settings.AwsAcessKey,settings.DomainName);
-        
+        if (settings.AddMonitor)
+        {
+            Console.WriteLine("Please visit https://docs.aws.amazon.com/xray/latest/devguide/xray-ruby.html first,to check your integration with monitoring sdk");
+            Console.WriteLine("Wanna Continue y/N");
+            var decision = Console.ReadLine();
+            if (decision is null || decision.ToLower() != "y")
+                return 0;
+            Console.WriteLine("Hint: We gonna add monitoring");    
+        }
         
         await AnsiConsole.Status()
             .AutoRefresh(true)
@@ -32,15 +40,15 @@ public class AppCreateCommand:AsyncCommand<AppCreateCommandSettings>
                 
                 ctx.Status("Network Create");
                 var networkResult = await networkService.Create();
-                if (addHttpsResult.IsFailure)
+                if (networkResult.IsFailure)
                 {
                     AnsiConsole.MarkupLine($"[red]{networkResult.Error}[/]");
                     return;
                 }               
                 
                 ctx.Status("Deploy App");
-                var appResult = await appService.Create(settings.CreateDockerfile, settings.ProjectType, settings.DockerfilePath);
-                if (addHttpsResult.IsFailure)
+                var appResult = await appService.Create(settings.CreateDockerfile, settings.ProjectType, settings.DockerfilePath,settings.AddMonitor);
+                if (appResult.IsFailure)
                 {
                     AnsiConsole.MarkupLine($"[red]{appResult.Error}[/]");
                     return;
