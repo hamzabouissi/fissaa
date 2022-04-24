@@ -71,14 +71,27 @@ public sealed class AppLogsommandSettings : InfrastructureSettings
 
 public sealed class AppDestroyCommandSettings : InfrastructureSettings
 {
-
-    [CommandOption("--all")] public bool All { get; set; } = false;
+    [Description("this will delete both network, app infrastructure")]
+    [CommandOption("--all")] 
+    public bool All { get; set; } = false;
 
 }
 
 public sealed class AppCreateCommandSettings : InfrastructureSettings
 {
-
+    
+    [Description("Environment are: dev, staging, prod")]
+    [CommandOption("--environment")]
+    [DefaultValue("dev")]
+    public string Environment { get; set; } = "dev"; 
+    
+    
+    [Description("Models are: pay-as-you-go,static")]
+    [CommandOption("--pricing-model")]
+    [DefaultValue("pay-as-you-go")]
+    public string PricingModel { get; set; } = "pay-as-you-go"; 
+    
+    [Description("Add AWS X-Ray to track your user requests")]
     [CommandOption("--add-monitor")]
     [DefaultValue(false)]
     public bool AddMonitor { get; set; } = false;
@@ -90,7 +103,10 @@ public sealed class AppCreateCommandSettings : InfrastructureSettings
     [CommandOption("--create-dockerfile")]
     [DefaultValue(false)]
     public bool CreateDockerfile { get; set; } = false;
-    [CommandOption("--project-type")] public string? ProjectType { get; set; } = null;
+    
+    [Description("describe your project framework, valid options:Fastapi, AspNetCore, NodeJs")]
+    [CommandOption("--project-type")] 
+    public string? ProjectType { get; set; } = null;
 
     
     public override ValidationResult Validate()
@@ -116,3 +132,16 @@ public sealed class AppCreateCommandSettings : InfrastructureSettings
     
 }
 
+
+public class AppRollbackApplySetting : InfrastructureSettings
+{
+    [Description("rollback to version prior to the current version, if no version nothing happen")]
+    [CommandOption("--latest")] public bool? Latest { get; set; } = true;
+    [Description("Image version for container registry")]
+    [CommandOption("--image-version")]
+    public string ImageVersion { get; set; } = string.Empty;
+}
+
+public class AppRollbackListSetting : InfrastructureSettings
+{
+}

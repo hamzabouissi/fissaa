@@ -11,7 +11,7 @@ public class AppDestroyCommand:AsyncCommand<AppDestroyCommandSettings>
         var appService = new AwsEcsService(settings.AwsSecretKey,settings.AwsAcessKey,settings.DomainName);
         await AnsiConsole.Status()
             .AutoRefresh(true)
-            .Spinner(Spinner.Known.Aesthetic)
+            .Spinner(Spinner.Known.Dots9)
             .SpinnerStyle(Style.Parse("yellow bold"))
             .StartAsync("Deleting App Started", async ctx =>
             {

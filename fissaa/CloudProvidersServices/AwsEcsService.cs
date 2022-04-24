@@ -4,7 +4,10 @@ using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
 using Amazon.CloudWatchLogs;
 using Amazon.CloudWatchLogs.Model;
+using Amazon.ECR;
+using Amazon.ECR.Model;
 using Amazon.ECS;
+using Amazon.ECS.Model;
 using Amazon.Runtime;
 using CSharpFunctionalExtensions;
 using ResourceNotFoundException = Amazon.CloudWatchLogs.Model.ResourceNotFoundException;
@@ -32,15 +35,19 @@ public class AwsEcsService
     public readonly AwsUtilFunctions awsUtilFunctions;
     private readonly AmazonCloudWatchLogsClient cloudWatchLogsClient;
     private readonly AmazonECSClient ecsClient;
+    private readonly AmazonECRClient ecrClient;
 
     public AwsEcsService(string awsSecretKey,string awsAccessKey, string domainName)
     {
         var auth = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
         ClientCformation = new AmazonCloudFormationClient(auth,Region);
         ecsClient = new AmazonECSClient(auth,Region);
-        awsUtilFunctions = new AwsUtilFunctions(awsSecretKey, awsAccessKey, domainName);
         cloudWatchLogsClient = new AmazonCloudWatchLogsClient(auth,region:Region);
         domainServices = new AwsDomainService(awsSecretKey, awsAccessKey);
+        ecrClient = new AmazonECRClient(auth, region: Region);
+        
+        awsUtilFunctions = new AwsUtilFunctions(awsSecretKey, awsAccessKey, domainName);
+
         
         DomainName = domainName;
         BaseDomain = string.Join(".",DomainName.Split(".")[^2..]);
@@ -55,71 +62,27 @@ public class AwsEcsService
         await awsUtilFunctions.DeleteStack(ServiceStackName);
         await awsUtilFunctions.DeleteEcrImages(RepoName);
     }
-    
+
     public async Task<Result<StackStatus>> Create(bool createDockerfile, string? projectType, string dockerfile,
         bool addMonitor)
     {
         string cloudFile;
 
-        var baseDomain = string.Join(".",DomainName.Split(".")[^2..]);
+        var baseDomain = string.Join(".", DomainName.Split(".")[^2..]);
         var hostedZoneId = await domainServices.GetHostedZoneId(baseDomain);
 
         if (createDockerfile && projectType is not null)
             await awsUtilFunctions.CreateDockerfile(projectType);
-        
+
         var image = await ImageDeployment(dockerfile);
-        // var image = "182476924183.dkr.ecr.us-east-1.amazonaws.com/django-jooddevops-xyz:1650044588000";
         if (addMonitor)
-        {
-       
-            cloudFile = await awsUtilFunctions.ExtractTextFromRemoteFile("https://fissaa-cli.s3.amazonaws.com/test/service-with-monitoring.yml");    
-        }
+            cloudFile = await awsUtilFunctions.ExtractTextFromRemoteFile(
+                "https://fissaa-cli.s3.amazonaws.com/test/service-with-monitoring.yml");
         else
-            cloudFile = await awsUtilFunctions.ExtractTextFromRemoteFile("https://fissaa-cli.s3.amazonaws.com/test/service.yml");
+            cloudFile = await awsUtilFunctions.ExtractTextFromRemoteFile(
+                "https://fissaa-cli.s3.amazonaws.com/test/service.yml");
         var priorityNumber = await awsUtilFunctions.GetListenerRuleNextPriorityNumber(NetworkStackName);
-        var parameters = new List<Parameter>()
-        {
-           new ()
-           {
-               ParameterKey = "StackName",
-               ParameterValue = NetworkStackName,
-           },
-           new ()
-           {
-               ParameterKey = "ServiceName",
-               ParameterValue = ServiceName,
-           },
-           new ()
-           {
-               ParameterKey = "HealthCheckPath",
-               ParameterValue = "/",
-           },
-           new ()
-           {
-               ParameterKey = "ImageUrl",
-               ParameterValue = image,
-           },
-           new ()
-           {
-               ParameterKey="HealthCheckIntervalSeconds",
-               ParameterValue="90"
-           },
-           new ()
-           {
-               ParameterKey = "Priority",
-               ParameterValue = priorityNumber.ToString(),
-           },
-           new()
-           { 
-               ParameterKey = "Domain",
-               ParameterValue = DomainName,
-           },
-           new()
-           {
-               ParameterKey = "HostedZoneId",
-               ParameterValue = hostedZoneId,
-           }
-        };
+        var parameters = GetEcsCloudformationParameters(image, priorityNumber, hostedZoneId);
         try
         {
             Console.WriteLine("Start Deploying");
@@ -137,22 +100,72 @@ public class AwsEcsService
                         Key = "app-domain",
                         Value = BaseDomain
                     }
-                   
+
                 }
             });
+            Console.WriteLine("Waiting Stack");
+            await awsUtilFunctions.WaitUntilStackCreatedOrDeleted(ServiceStackName);
+            var status = await awsUtilFunctions.GetStackStatus(ServiceStackName);
+            AddInfoFile(addMonitor);
+            return awsUtilFunctions.StackStatusIsSuccessfull(status)
+                ? Result.Success(status)
+                : Result.Failure<StackStatus>("creating app failed");
         }
-        catch (AlreadyExistsException )
+        catch (AlreadyExistsException)
         {
-            var priority = parameters.Find(x => x.ParameterKey == "Priority");
-            priority.ParameterValue = (int.Parse(priority.ParameterValue)-1).ToString();
-            await Update(parameters, cloudFile);
+            var result = await Update(image);
+            return result;
         }
-        Console.WriteLine("Waiting Stack");
-        await awsUtilFunctions.WaitUntilStackCreatedOrDeleted(ServiceStackName);
-        var status = await awsUtilFunctions.GetStackStatus(ServiceStackName);
-        AddInfoFile(addMonitor);
-        return awsUtilFunctions.StackStatusIsSuccessfull(status) ? Result.Success(status): Result.Failure<StackStatus>("creating app failed") ;
         
+
+}
+
+    private List<Parameter> GetEcsCloudformationParameters(string image, int priorityNumber, string hostedZoneId)
+    {
+        var parameters = new List<Parameter>()
+        {
+            new()
+            {
+                ParameterKey = "StackName",
+                ParameterValue = NetworkStackName,
+            },
+            new()
+            {
+                ParameterKey = "ServiceName",
+                ParameterValue = ServiceName,
+            },
+            new()
+            {
+                ParameterKey = "HealthCheckPath",
+                ParameterValue = "/",
+            },
+            new()
+            {
+                ParameterKey = "ImageUrl",
+                ParameterValue = image,
+            },
+            new()
+            {
+                ParameterKey = "HealthCheckIntervalSeconds",
+                ParameterValue = "90"
+            },
+            new()
+            {
+                ParameterKey = "Priority",
+                ParameterValue = priorityNumber.ToString(),
+            },
+            new()
+            {
+                ParameterKey = "Domain",
+                ParameterValue = DomainName,
+            },
+            new()
+            {
+                ParameterKey = "HostedZoneId",
+                ParameterValue = hostedZoneId,
+            }
+        };
+        return parameters;
     }
 
     public void AddInfoFile(bool addMonitor)
@@ -201,15 +214,27 @@ public class AwsEcsService
        
     }
     
-    private async Task Update(List<Parameter> parameters, string cloudFile)
+    private async Task<Result<StackStatus>> Update(string image)
     {
         Console.WriteLine($"updating service stack {ServiceStackName}");
+        
+        var baseDomain = string.Join(".",DomainName.Split(".")[^2..]);
+        var hostedZoneId = await domainServices.GetHostedZoneId(baseDomain);
+        
+        var priorityNumber = await awsUtilFunctions.GetListenerRuleNextPriorityNumber(NetworkStackName) - 1;
+        var parameters = GetEcsCloudformationParameters(image, priorityNumber, hostedZoneId);
+        
         var response = await ClientCformation.UpdateStackAsync(new UpdateStackRequest
         {
             Parameters = parameters,
             StackName = ServiceStackName,
-            TemplateBody = cloudFile,
+            UsePreviousTemplate = true
         });
+      
+        Console.WriteLine("Waiting Stack");
+        await awsUtilFunctions.WaitUntilStackCreatedOrDeleted(ServiceStackName);
+        var status = await awsUtilFunctions.GetStackStatus(ServiceStackName);
+        return awsUtilFunctions.StackStatusIsSuccessfull(status) ? Result.Success(status): Result.Failure<StackStatus>("updating app failed") ;
     }
 
     private async Task<string> ImageDeployment(string dockerfile)
@@ -225,8 +250,36 @@ public class AwsEcsService
         return image;
     }
 
-    public async Task<Result> RollBack()
+    public async Task<Result> RollBackApply(bool? latest, string imageVersion)
     {
-        return Result.Success();
+        var accountId = await awsUtilFunctions.GetAccountId();
+        var image = $"{accountId}.dkr.ecr.{Region.SystemName}.amazonaws.com/{RepoName}:{imageVersion}";
+        var updateResult = await Update(image);
+        return updateResult;
+
     }
+    
+    public async Task RollBackList()
+    {
+        var images = await ecrClient.DescribeImagesAsync(new DescribeImagesRequest
+        {
+            RepositoryName = RepoName
+        });
+        foreach (var image in images.ImageDetails.OrderByDescending(p=>p.ImagePushedAt))
+        {
+            Console.WriteLine($"DateTime: {image.ImagePushedAt}, ImageTag: {string.Join(' ',image.ImageTags)} ");
+        }
+    }
+
+    // public async Task Exec()
+    // {
+    //     var executeCommandResponse = await ecsClient.ExecuteCommandAsync(new ExecuteCommandRequest
+    //     {
+    //         Cluster = null,
+    //         Command = null,
+    //         Container = null,
+    //         Interactive = false,
+    //         Task = null
+    //     });
+    // }
 }

@@ -170,6 +170,13 @@ Resources:
                   - 'elasticloadbalancing:Describe*'
                   - 'elasticloadbalancing:RegisterInstancesWithLoadBalancer'
                   - 'elasticloadbalancing:RegisterTargets'
+                  - "ssmmessages:CreateControlChannel"
+                  - "ssmmessages:CreateDataChannel"
+                  - "ssmmessages:OpenControlChannel"
+                  - "ssmmessages:OpenDataChannel"
+
+
+
                 Resource: '*'
   ECSTaskExecutionRole:
     Type: 'AWS::IAM::Role'

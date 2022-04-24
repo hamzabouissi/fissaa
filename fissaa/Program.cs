@@ -8,6 +8,26 @@ using Spectre.Console.Cli;
 
 var app = new CommandApp();
 
+// Synchronous
+// AnsiConsole.Status()
+//     .Start("Thinking...", ctx => 
+//     {
+//         // Simulate some work
+//         AnsiConsole.MarkupLine("Doing some work...");
+//         Thread.Sleep(1000);
+//         
+//         // Update the status and spinner
+//         ctx.Status("Thinking some more");
+//         ctx.Spinner(Spinner.Known.Star);
+//         ctx.SpinnerStyle(Style.Parse("green"));
+//
+//         // Simulate some work
+//         AnsiConsole.MarkupLine("Doing some more work...");
+//         Thread.Sleep(2000);
+//     });
+
+
+
 
 app.Configure(config =>
 {
@@ -18,7 +38,11 @@ app.Configure(config =>
         infr.AddCommand<AppDestroyCommand>("destroy");
         infr.AddCommand<AppCreateCommand>("deploy");
         infr.AddCommand<AppLogsCommand>("logs");
-        infr.AddCommand<AppLogsCommand>("rollback");
+        infr.AddBranch("rollback" , command =>
+        {
+            command.AddCommand<AppRollbackListCommand>("list-image-tags");
+            command.AddCommand<AppRollbackApplyCommand>("apply");
+        });
         
     });
     config.AddBranch<BudgetSettings>("budget", budg =>
@@ -47,4 +71,3 @@ app.Configure(config =>
     });
 });
 return await app.RunAsync(args);
-

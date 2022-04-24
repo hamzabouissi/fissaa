@@ -43,7 +43,7 @@ public class AwsUtilFunctions
 
     public bool StackStatusIsSuccessfull(StackStatus? status)
     {
-        return status is not null && status == StackStatus.CREATE_COMPLETE;
+        return status is not null && (status == StackStatus.CREATE_COMPLETE || status == StackStatus.UPDATE_COMPLETE ) ;
     }
 
     public async Task<StackStatus?> GetStackStatus(string stackName)
@@ -114,7 +114,6 @@ public class AwsUtilFunctions
         while (stackStatus!=null && !endStatus.Exists(x=>x ==stackStatus))
         {
             stackStatus = await GetStackStatus(stackName);
-            Console.WriteLine(stackStatus?.Value);
             Thread.Sleep(5000);
         }
     }

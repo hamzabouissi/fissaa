@@ -25,35 +25,38 @@ public class AppCreateCommand:AsyncCommand<AppCreateCommandSettings>
         
         await AnsiConsole.Status()
             .AutoRefresh(true)
-            .Spinner(Spinner.Known.Aesthetic)
+            .Spinner(Spinner.Known.Dots9)
             .SpinnerStyle(Style.Parse("yellow bold"))
             .StartAsync("Creating App Started", async ctx =>
             {
-                ctx.Status("Create Https Certificate");
+                ctx.Status("Create TLS Certificate");
                 var addHttpsResult = await domainService.AddHttps(settings.DomainName);
                 if (addHttpsResult.IsFailure)
                 {
                     AnsiConsole.MarkupLine($"[red]{addHttpsResult.Error}[/]");
                     return;
                 }
-                   
+                AnsiConsole.MarkupLine("TLS Certificate Added :check_mark_button: ");
                 
-                ctx.Status("Network Create");
+                ctx.Status("Create Network infrastructure");
                 var networkResult = await networkService.Create();
                 if (networkResult.IsFailure)
                 {
                     AnsiConsole.MarkupLine($"[red]{networkResult.Error}[/]");
                     return;
-                }               
-                
+                }        
+                Thread.Sleep(8000);
+                AnsiConsole.MarkupLine("Network Created :check_mark_button: ");
+                ctx.Spinner(Spinner.Known.Monkey);
                 ctx.Status("Deploy App");
+                Thread.Sleep(15000);
                 var appResult = await appService.Create(settings.CreateDockerfile, settings.ProjectType, settings.DockerfilePath,settings.AddMonitor);
                 if (appResult.IsFailure)
                 {
                     AnsiConsole.MarkupLine($"[red]{appResult.Error}[/]");
                     return;
                 }    
-                AnsiConsole.MarkupLine("[green]Done[/]");
+                AnsiConsole.MarkupLine("App Deployed :check_mark_button: ");
             });
         return 0;
     }
