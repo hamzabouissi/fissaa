@@ -2,12 +2,13 @@
 using Amazon;
 using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
+using Amazon.CloudWatch;
+using Amazon.CloudWatch.Model;
 using Amazon.CloudWatchLogs;
 using Amazon.CloudWatchLogs.Model;
 using Amazon.ECR;
 using Amazon.ECR.Model;
 using Amazon.ECS;
-using Amazon.ECS.Model;
 using Amazon.Runtime;
 using CSharpFunctionalExtensions;
 using ResourceNotFoundException = Amazon.CloudWatchLogs.Model.ResourceNotFoundException;
@@ -27,6 +28,7 @@ public class AwsEcsService
 
     public string NetworkStackName => $"{EscapedBaseDomain}-network-stack";
     public string ServiceStackName => $"{EscapedDomain}-Service-Stack";
+    public string AlarmStackName => $"{EscapedDomain}-Alarm-Stack";
     public string ServiceName => $"{EscapedDomain}-Service";
     public string RepoName => EscapedDomain;
     public readonly RegionEndpoint Region = RegionEndpoint.USEast1;
@@ -36,6 +38,7 @@ public class AwsEcsService
     private readonly AmazonCloudWatchLogsClient cloudWatchLogsClient;
     private readonly AmazonECSClient ecsClient;
     private readonly AmazonECRClient ecrClient;
+    private readonly AmazonCloudWatchClient cloudWatchClient;
 
     public AwsEcsService(string awsSecretKey,string awsAccessKey, string domainName)
     {
@@ -43,6 +46,7 @@ public class AwsEcsService
         ClientCformation = new AmazonCloudFormationClient(auth,Region);
         ecsClient = new AmazonECSClient(auth,Region);
         cloudWatchLogsClient = new AmazonCloudWatchLogsClient(auth,region:Region);
+        cloudWatchClient = new AmazonCloudWatchClient(auth,region:Region);
         domainServices = new AwsDomainService(awsSecretKey, awsAccessKey);
         ecrClient = new AmazonECRClient(auth, region: Region);
         
@@ -269,6 +273,74 @@ public class AwsEcsService
         {
             Console.WriteLine($"DateTime: {image.ImagePushedAt}, ImageTag: {string.Join(' ',image.ImageTags)} ");
         }
+    }
+
+    public async Task<Result<StackStatus>> CreateAlarm(string email)
+    {
+        var cloudFile = await awsUtilFunctions.ExtractTextFromRemoteFile(
+            "https://fissaa-cli.s3.amazonaws.com/test/ElbAlarm.yml");
+        var networkStacksResponse = await ClientCformation.DescribeStacksAsync(new DescribeStacksRequest
+        {
+            StackName = NetworkStackName
+        });
+        var serviceStacksResponse = await ClientCformation.DescribeStacksAsync(new DescribeStacksRequest
+        {
+            StackName = ServiceStackName
+        });
+
+        var targetGroupArn = serviceStacksResponse.Stacks.First().Outputs.Single(x => x.OutputKey == "TargetGroup")
+            .OutputValue.Split("/",2).Last();
+        // networkStacksResponse.Stacks.First().Outputs.Single(x => x.OutputKey == "PublicLoadBalancerArn").OutputValue
+        var loadBalancerArn = "arn:aws:elasticloadbalancing:us-east-1:182476924183:loadbalancer/app/joodd-Publi-A71VKV5U5ZQZ/cd3f3bf13be17190"
+           .Split("/",2).Last();
+
+        
+        var parameters = new List<Parameter>()
+        {
+            new Parameter
+            {
+                ParameterKey = "Email",
+                ParameterValue = email,
+            },
+            new Parameter
+            {
+                ParameterKey = "ServiceName",
+                ParameterValue = ServiceName,
+            },
+            new Parameter
+            {
+                ParameterKey = "LoadBalancerArn",
+                ParameterValue = loadBalancerArn,
+            },
+            new Parameter
+            {
+                ParameterKey = "TargetGroupArn",
+                ParameterValue = $"targetgroup/{targetGroupArn}",
+            },
+        };
+        var createStackResponse = await ClientCformation.CreateStackAsync(new CreateStackRequest
+        {
+            OnFailure = OnFailure.DO_NOTHING,
+            Parameters = parameters,
+            StackName = AlarmStackName,
+            TemplateBody = cloudFile,
+            TimeoutInMinutes = 30,
+            Tags = new List<Tag>()
+            {
+                new()
+                {
+                    Key = "app-domain",
+                    Value = BaseDomain
+                }
+        
+            }
+        });
+        Console.WriteLine("Waiting Stack");
+        await awsUtilFunctions.WaitUntilStackCreatedOrDeleted(AlarmStackName);
+        var status = await awsUtilFunctions.GetStackStatus(AlarmStackName);
+        return awsUtilFunctions.StackStatusIsSuccessfull(status)
+            ? Result.Success(status)
+            : Result.Failure<StackStatus>("creating alarm failed");
     }
 
     // public async Task Exec()

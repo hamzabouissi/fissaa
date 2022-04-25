@@ -6,21 +6,6 @@ using Spectre.Console.Cli;
 namespace fissaa.commands.infrastructure;
 
 
-public class CommandSettings<T> : CommandSettings
-{
-    public override ValidationResult Validate()
-    {
-        var type = typeof(T);
-        foreach (var p in type.GetProperties())
-        {
-            Console.WriteLine(p.Name);
-        }
-
-        return ValidationResult.Success();
-    }
-}
-
-
 public class InfrastructureSettings : CommandSettings
 {
     
@@ -31,7 +16,7 @@ public class InfrastructureSettings : CommandSettings
     [CommandArgument(1,"<aws-access-key>")]
     public string AwsAcessKey { get; set; }
     
-    [Description("domainName must the base , if you specifiy subdomain like sub.example.com, example.com will be considered as domain")]
+    [Description("it must be registred on route53 or any domain registrar")]
     [CommandArgument(2,"<domain>")]
     public string DomainName { get; set; }
 
@@ -96,6 +81,7 @@ public sealed class AppCreateCommandSettings : InfrastructureSettings
     [DefaultValue(false)]
     public bool AddMonitor { get; set; } = false;
     
+    
     [CommandOption("--dockerfile-path")]
     [DefaultValue("./")]
     public string DockerfilePath { get; set; }
@@ -107,8 +93,10 @@ public sealed class AppCreateCommandSettings : InfrastructureSettings
     [Description("describe your project framework, valid options:Fastapi, AspNetCore, NodeJs")]
     [CommandOption("--project-type")] 
     public string? ProjectType { get; set; } = null;
-
     
+    
+
+
     public override ValidationResult Validate()
     {
         var validationResult = base.Validate();
@@ -144,4 +132,12 @@ public class AppRollbackApplySetting : InfrastructureSettings
 
 public class AppRollbackListSetting : InfrastructureSettings
 {
+}
+
+
+public class AppAddAlarmSettings : InfrastructureSettings
+{
+    [Description("email to recieve notification")]
+    [CommandOption("--email")]
+    public string Email { get; set; }
 }

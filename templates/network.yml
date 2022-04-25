@@ -242,6 +242,16 @@ Outputs:
         - ':'
         - - !Ref 'AWS::StackName'
           - PublicLoadBalancer
+  
+  LoadBalancer:
+    Description: The url of the external load balancer
+    Value: !Ref PublicLoadBalancer
+    Export:
+      Name: !Join
+        - ':'
+        - - !Ref 'AWS::StackName'
+          - PublicLoadBalancerArn
+  
   ECSRole:
     Description: The ARN of the ECS role
     Value: !GetAtt ECSRole.Arn

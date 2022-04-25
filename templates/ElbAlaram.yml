@@ -1,0 +1,44 @@
+
+Parameters:
+  Email:
+    Type: String
+  ServiceName:
+    Type: String
+  TargetGroupArn:
+    Type: String
+  LoadBalancerArn:
+    Type: String
+  Description:
+    Type: String
+    Default: "this alarm for 5xx error "
+
+Resources:
+  ElbAlarm:
+    DependsOn: AlarmNotificationTopic
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Ref ServiceName
+      AlarmDescription: !Ref Description
+      AlarmActions:
+        - !Ref AlarmNotificationTopic
+      MetricName: "HTTPCode_Target_5XX_Count"
+      Namespace: "AWS/ApplicationELB"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      EvaluationPeriods: 1
+      Period: 300
+      Statistic: "Sum"
+      Threshold: 10
+      Dimensions:
+        - Name: TargetGroup
+          Value: !Ref TargetGroupArn
+        - Name: LoadBalancer
+          Value: !Ref LoadBalancerArn
+           
+  
+  AlarmNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - Endpoint: !Ref Email
+          Protocol: "email"
+          

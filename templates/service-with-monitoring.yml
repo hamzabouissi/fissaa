@@ -162,3 +162,11 @@ Resources:
               Fn::ImportValue: !Join [":", [!Ref "StackName", "ElbDnsName"]]
             HostedZoneId:
               Fn::ImportValue: !Join [":", [!Ref "StackName", "ElbHostedZone"]]
+
+
+Outputs:
+  TargetGroup:
+    Description: The name of the ECS cluster
+    Value: !Ref TargetGroup
+    Export:
+      Name: !Join [":", [!Ref "AWS::StackName", "TargetGroupArn"]]

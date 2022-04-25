@@ -17,6 +17,7 @@
       <PackageReference Include="AWSSDK.Budgets" Version="3.7.2.21" />
       <PackageReference Include="AWSSDK.CertificateManager" Version="3.7.1.100" />
       <PackageReference Include="AWSSDK.CloudFormation" Version="3.7.9.13" />
+      <PackageReference Include="AWSSDK.CloudWatch" Version="3.7.4.3" />
       <PackageReference Include="AWSSDK.CloudWatchLogs" Version="3.7.2.39" />
       <PackageReference Include="AWSSDK.EC2" Version="3.7.60.6" />
       <PackageReference Include="AWSSDK.ECR" Version="3.7.3.4" />

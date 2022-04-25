@@ -38,6 +38,7 @@ app.Configure(config =>
         infr.AddCommand<AppDestroyCommand>("destroy");
         infr.AddCommand<AppCreateCommand>("deploy");
         infr.AddCommand<AppLogsCommand>("logs");
+        infr.AddCommand<AppAddAlarmCommand>("add-alarm");
         infr.AddBranch("rollback" , command =>
         {
             command.AddCommand<AppRollbackListCommand>("list-image-tags");
