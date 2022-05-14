@@ -31,7 +31,7 @@ public sealed class AppLogsommandSettings : InfrastructureSettings
 {
     [Description("format M/dd/yyyy hh:mm")]
     [CommandOption("--start-date")]
-    public string StartDate { get; set; } =(DateTime.Now-TimeSpan.FromMinutes(15)).ToString("M/dd/yyyy hh:mm");
+    public string StartDate { get; set; } =(DateTime.Now-TimeSpan.FromMinutes(60)).ToString("M/dd/yyyy hh:mm");
 
     [CommandOption("--hour")] public int Hour { get; set; } = 1;
 
@@ -80,19 +80,19 @@ public sealed class AppCreateCommandSettings : InfrastructureSettings
     [CommandOption("--add-monitor")]
     [DefaultValue(false)]
     public bool AddMonitor { get; set; } = false;
-    
-    
+
+
     [CommandOption("--dockerfile-path")]
     [DefaultValue("./")]
-    public string DockerfilePath { get; set; }
+    public string DockerfilePath { get; set; } = "./";
    
-    [CommandOption("--create-dockerfile")]
-    [DefaultValue(false)]
-    public bool CreateDockerfile { get; set; } = false;
-    
-    [Description("describe your project framework, valid options:Fastapi, AspNetCore, NodeJs")]
-    [CommandOption("--project-type")] 
-    public string? ProjectType { get; set; } = null;
+    // [CommandOption("--create-dockerfile")]
+    // [DefaultValue(false)]
+    // public bool CreateDockerfile { get; set; } = false;
+    //
+    // [Description("describe your project framework, valid options:Fastapi, AspNetCore, NodeJs")]
+    // [CommandOption("--project-type")] 
+    // public string? ProjectType { get; set; } = null;
     
     
 
@@ -102,12 +102,12 @@ public sealed class AppCreateCommandSettings : InfrastructureSettings
         var validationResult = base.Validate();
         if (!validationResult.Successful)
             return validationResult;
-        if (CreateDockerfile)
-        {
-            return ProjectTypeChoices.Exists(p => p == ProjectType)
-                ? ValidationResult.Success()
-                : ValidationResult.Error("--project-type choice is wrong");
-        }
+        // if (CreateDockerfile)
+        // {
+        //     return ProjectTypeChoices.Exists(p => p == ProjectType)
+        //         ? ValidationResult.Success()
+        //         : ValidationResult.Error("--project-type choice is wrong");
+        // }
         return ValidationResult.Success();
        
     }

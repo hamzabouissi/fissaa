@@ -1,8 +1,6 @@
-using System.Buffers.Text;
 using Amazon;
 using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
-
 using Amazon.ECR;
 using Amazon.ECR.Model;
 using Amazon.ECS;
@@ -10,6 +8,8 @@ using Amazon.ECS.Model;
 using Amazon.ElasticLoadBalancingV2;
 using Amazon.ElasticLoadBalancingV2.Model;
 using Amazon.Runtime;
+using Amazon.S3;
+using Amazon.S3.Transfer;
 using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
 using CliWrap;
@@ -17,28 +17,29 @@ using CliWrap.Buffered;
 using Flurl.Http;
 using Task = System.Threading.Tasks.Task;
 
-namespace fissaa;
+namespace fissaa.CloudProvidersServices;
 
 public class AwsUtilFunctions
 {
-    private readonly AmazonECRClient ClientEcr;
+    private readonly AmazonECRClient _clientEcr;
     public readonly AmazonCloudFormationClient ClientCformation;
-    private readonly AmazonECSClient ClientEcs;
-    public readonly AmazonSecurityTokenServiceClient StsClient;
-    public readonly AmazonElasticLoadBalancingV2Client ElasticLoadBalancingV2Client;
+    private readonly AmazonECSClient _clientEcs;
+    private readonly AmazonSecurityTokenServiceClient _stsClient;
+    private readonly AmazonElasticLoadBalancingV2Client _elasticLoadBalancingV2Client;
+    private readonly AmazonS3Client _s3Client;
+    private RegionEndpoint Region  => RegionEndpoint.USEast1;
 
-    public RegionEndpoint Region { get; set; } = RegionEndpoint.USEast1;
 
-
-    public AwsUtilFunctions(string awsSecretKey,string awsAccessKey, string projectName)
+    public AwsUtilFunctions(string awsSecretKey,string awsAccessKey)
     {
         var auth = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
         
-        ClientEcs = new AmazonECSClient(credentials:auth,Region);
-        ClientEcr = new AmazonECRClient(credentials:auth,Region);
-        StsClient = new AmazonSecurityTokenServiceClient(auth,Region);
+        _clientEcs = new AmazonECSClient(credentials:auth,Region);
+        _clientEcr = new AmazonECRClient(credentials:auth,Region);
+        _stsClient = new AmazonSecurityTokenServiceClient(auth,Region);
         ClientCformation = new AmazonCloudFormationClient(auth,Region);
-        ElasticLoadBalancingV2Client = new AmazonElasticLoadBalancingV2Client(auth, Region);
+        _elasticLoadBalancingV2Client = new AmazonElasticLoadBalancingV2Client(auth, Region);
+        _s3Client = new AmazonS3Client(auth,Region);
     }
 
     public bool StackStatusIsSuccessfull(StackStatus? status)
@@ -57,7 +58,7 @@ public class AwsUtilFunctions
             var stackStatus = stacksResponse.Stacks.First().StackStatus;
             return stackStatus;
         }
-        catch (Exception e)
+        catch (Exception )
         {
             return null;
         }
@@ -78,13 +79,21 @@ public class AwsUtilFunctions
         
         while(endStatus.Exists(e=>e==stackStatus))
         {
-            var eventsResponse = await ClientCformation.DescribeStackResourcesAsync(new DescribeStackResourcesRequest()
+            try
             {
-                StackName = stackName
-            });//todo
-            foreach (var resource in eventsResponse.StackResources)
-                Console.WriteLine($"{resource.ResourceType}, status = {resource.ResourceStatus}");
-
+                var eventsResponse = await ClientCformation.DescribeStackResourcesAsync(
+                    new DescribeStackResourcesRequest()
+                    {
+                        StackName = stackName
+                    });
+                foreach (var resource in eventsResponse.StackResources)
+                    Console.WriteLine($"{resource.ResourceType}, status = {resource.ResourceStatus}");
+            }
+            catch (Exception )
+            {
+                break;
+            }
+            
             Thread.Sleep(5);
             stackStatus = await GetStackStatus(stackName);
             if (stackStatus is null)
@@ -139,38 +148,38 @@ public class AwsUtilFunctions
         }
                 
     }
-    public async Task DeleteService(string ClusterName,string ServiceName)
+    public async Task DeleteService(string clusterName,string serviceName)
     {
-        var tasksResponse = await ClientEcs.ListTasksAsync(new ListTasksRequest
+        var tasksResponse = await _clientEcs.ListTasksAsync(new ListTasksRequest
         {
-            Cluster = ClusterName,
+            Cluster = clusterName,
         });
         foreach (var task in tasksResponse.TaskArns)
         {
-            await ClientEcs.StopTaskAsync(new StopTaskRequest
+            await _clientEcs.StopTaskAsync(new StopTaskRequest
             {
-                Cluster = ClusterName,
+                Cluster = clusterName,
                 Task = task
             });
         }
         try
         {
-            var response = await ClientEcs.DeleteServiceAsync(new DeleteServiceRequest
+            var response = await _clientEcs.DeleteServiceAsync(new DeleteServiceRequest
             {
-                Cluster = ClusterName,
+                Cluster = clusterName,
                 Force = true,
-                Service = ServiceName
+                Service = serviceName
             });
             Console.WriteLine($"status: {response.HttpStatusCode}");
         }
-        catch (ServiceNotFoundException e)
+        catch (ServiceNotFoundException)
         {
             Console.WriteLine("Service Not Found on Ecs...");
         }
     }
     public async Task<string> GetAccountId()
     {
-        var getCallerIdentityResponse = await StsClient.GetCallerIdentityAsync(new GetCallerIdentityRequest());
+        var getCallerIdentityResponse = await _stsClient.GetCallerIdentityAsync(new GetCallerIdentityRequest());
         var accountId = getCallerIdentityResponse.Arn.Split(":")[4];
         return accountId;
     }
@@ -182,13 +191,13 @@ public class AwsUtilFunctions
         return text;
     }
     
-    public async Task<(string imageName, string registry)> BuildImage(string dockerfile,string RepoName)
+    public async Task<(string imageName, string registry)> BuildImage(string dockerfile,string repoName)
     {
         var accountId = await GetAccountId();
         var dateNow = DateTimeOffset.Parse(DateTime.Now.ToString());
         var tag = dateNow.ToUnixTimeMilliseconds();
         var registry = GetRegistry(accountId);
-        var imageName = $"{registry}/{RepoName}:{tag}";
+        var imageName = $"{registry}/{repoName}:{tag}";
         var result = await Cli.Wrap("docker")
             .WithArguments(args => args
                 .Add("build")
@@ -205,7 +214,7 @@ public class AwsUtilFunctions
     }
     public async Task<string> DecodeRegistryLoginTokenToPassword()
     {
-        var tokenResponse = await ClientEcr.GetAuthorizationTokenAsync(new GetAuthorizationTokenRequest());
+        var tokenResponse = await _clientEcr.GetAuthorizationTokenAsync(new GetAuthorizationTokenRequest());
         var decodeToken = System.Text.Encoding.UTF8.GetString(
                 Convert.FromBase64String(tokenResponse.AuthorizationData.First().AuthorizationToken))
             .Split(":")[1];
@@ -214,7 +223,7 @@ public class AwsUtilFunctions
 
     public static async Task LoginToRegistry(string decodeToken, string registry)
     {
-        var result = await Cli.Wrap("docker")
+        await Cli.Wrap("docker")
             .WithArguments(args => args
                 .Add("login")
                 .Add("--username")
@@ -229,30 +238,29 @@ public class AwsUtilFunctions
 
     public async Task DeployImageToEcr(string imageName)
     {
-        var result = await Cli.Wrap("docker")
+        await Cli.Wrap("docker")
             .WithArguments(args => args
                 .Add("push")
                 .Add(imageName)
             )
             .WithValidation(CommandResultValidation.ZeroExitCode)
             .ExecuteBufferedAsync();
-        var stdOut = result.StandardOutput;
      
     }
     public async Task DeleteEcrImages(string repo)
     {
         
-        var imagesResponse = await ClientEcr.ListImagesAsync(request: new ListImagesRequest { RepositoryName = repo });
+        var imagesResponse = await _clientEcr.ListImagesAsync(request: new ListImagesRequest { RepositoryName = repo });
         if (imagesResponse.ImageIds.Count == 0)
             return;
         
-        var result = await ClientEcr.BatchDeleteImageAsync(new BatchDeleteImageRequest
+        var result = await _clientEcr.BatchDeleteImageAsync(new BatchDeleteImageRequest
         {
             ImageIds = imagesResponse.ImageIds,
             RepositoryName = repo
         });
         result.Failures.ForEach(p=>Console.WriteLine(p.FailureReason));
-        await ClientEcr.DeleteRepositoryAsync(new DeleteRepositoryRequest
+        await _clientEcr.DeleteRepositoryAsync(new DeleteRepositoryRequest
         {
             Force = true,
             RepositoryName = repo
@@ -286,7 +294,7 @@ public class AwsUtilFunctions
         });
         var stack = stackDescribeResult.Stacks.First();
         var listener = stack.Outputs.Single(o => o.OutputKey == "HttpsPublicListener");
-        var rulesResponse = await ElasticLoadBalancingV2Client.DescribeRulesAsync(new DescribeRulesRequest
+        var rulesResponse = await _elasticLoadBalancingV2Client.DescribeRulesAsync(new DescribeRulesRequest
         {
             ListenerArn = listener.OutputValue
 
@@ -300,7 +308,7 @@ public class AwsUtilFunctions
        
         try
         {
-            await ClientEcr.CreateRepositoryAsync(new CreateRepositoryRequest
+            await _clientEcr.CreateRepositoryAsync(new CreateRepositoryRequest
             {
                 RepositoryName = reposityName,
             });
@@ -310,4 +318,12 @@ public class AwsUtilFunctions
            
         }
     }
+
+    public async Task UploadS3File(Stream fileStream, string bucketName, string keyName)
+    {
+        var fileTransferUtility = new TransferUtility(_s3Client);
+        await fileTransferUtility.UploadAsync(fileStream, bucketName, keyName);
+    }
+    
+   
 }

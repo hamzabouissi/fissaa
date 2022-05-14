@@ -3,30 +3,10 @@ using fissaa;
 using fissaa.commands.domain;
 using fissaa.commands.infrastructure;
 using fissaa.commands.storage;
-using Spectre.Console;
+using fissaa.commands.Templates;
 using Spectre.Console.Cli;
 
 var app = new CommandApp();
-
-// Synchronous
-// AnsiConsole.Status()
-//     .Start("Thinking...", ctx => 
-//     {
-//         // Simulate some work
-//         AnsiConsole.MarkupLine("Doing some work...");
-//         Thread.Sleep(1000);
-//         
-//         // Update the status and spinner
-//         ctx.Status("Thinking some more");
-//         ctx.Spinner(Spinner.Known.Star);
-//         ctx.SpinnerStyle(Style.Parse("green"));
-//
-//         // Simulate some work
-//         AnsiConsole.MarkupLine("Doing some more work...");
-//         Thread.Sleep(2000);
-//     });
-
-
 
 
 app.Configure(config =>
@@ -65,10 +45,13 @@ app.Configure(config =>
         });
         infr.AddBranch("s3", storageInit =>
         {
-            storageInit.AddCommand<DatabaseInitCommand>("init");
-            storageInit.AddCommand<DatabaseInitCommand>("destroy");
+            storageInit.AddCommand<S3InitCommand>("init");
         });
 
+    });
+    config.AddBranch<TemplateSettings>("template", command =>
+    {
+        command.AddCommand<TemplateUseCommand>("use");
     });
 });
 return await app.RunAsync(args);

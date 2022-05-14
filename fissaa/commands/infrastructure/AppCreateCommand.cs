@@ -1,6 +1,5 @@
-using Amazon.CloudFormation;
 using CSharpFunctionalExtensions;
-using fissaa.Decorator;
+using fissaa.CloudProvidersServices;
 using Spectre.Console.Cli;
 using Spectre.Console;
 
@@ -27,8 +26,17 @@ public class AppCreateCommand:AsyncCommand<AppCreateCommandSettings>
             .AutoRefresh(true)
             .Spinner(Spinner.Known.Dots9)
             .SpinnerStyle(Style.Parse("yellow bold"))
-            .StartAsync("Creating App Started", async ctx =>
+            .StartAsync("Creating App started", async ctx =>
             {
+                ctx.Status("Create Vpc ");
+                var vpcResult = await networkService.CreateVpc();
+                if (vpcResult.IsFailure)
+                {
+                    AnsiConsole.MarkupLine($"[red]{vpcResult.Error}[/]");
+                    return;
+                }        
+                AnsiConsole.MarkupLine(":house: Vpc Created :check_mark_button: ");
+                
                 ctx.Status("Create TLS Certificate");
                 var addHttpsResult = await domainService.AddHttps(settings.DomainName);
                 if (addHttpsResult.IsFailure)
@@ -45,12 +53,19 @@ public class AppCreateCommand:AsyncCommand<AppCreateCommandSettings>
                     AnsiConsole.MarkupLine($"[red]{networkResult.Error}[/]");
                     return;
                 }        
-                Thread.Sleep(8000);
                 AnsiConsole.MarkupLine("Network Created :check_mark_button: ");
+                
+                ctx.Status("Create Load Balancer ");
+                Result albCreateResult = await networkService.CreateAlb();
+                if (albCreateResult.IsFailure)
+                {
+                    AnsiConsole.MarkupLine($"[red]{albCreateResult.Error}[/]");
+                    return;
+                }
+                AnsiConsole.MarkupLine("Load Balancer Created :check_mark_button: ");
                 ctx.Spinner(Spinner.Known.Monkey);
                 ctx.Status("Deploy App");
-                Thread.Sleep(15000);
-                var appResult = await appService.Create(settings.CreateDockerfile, settings.ProjectType, settings.DockerfilePath,settings.AddMonitor);
+                var appResult = await appService.Create(ContainerTemplate.App,settings.DockerfilePath,settings.AddMonitor,String.Empty);
                 if (appResult.IsFailure)
                 {
                     AnsiConsole.MarkupLine($"[red]{appResult.Error}[/]");

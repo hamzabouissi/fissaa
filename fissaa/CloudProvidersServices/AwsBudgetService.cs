@@ -4,6 +4,7 @@ using Amazon.Budgets;
 using Amazon.Budgets.Model;
 using Amazon.Runtime;
 using CSharpFunctionalExtensions;
+using fissaa.CloudProvidersServices;
 
 namespace fissaa;
 
@@ -17,7 +18,7 @@ public class AwsBudgetService
     {
         var auth = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
         budgetsClient = new AmazonBudgetsClient(auth, Region);
-        awsUtilFunctions = new AwsUtilFunctions(awsSecretKey, awsAccessKey, string.Empty);
+        awsUtilFunctions = new AwsUtilFunctions(awsSecretKey, awsAccessKey);
 
     }
 
@@ -26,7 +27,6 @@ public class AwsBudgetService
         var acountId = await awsUtilFunctions.GetAccountId();
         var baseDomain = domainName;
         var tag = baseDomain;
-        //todo activate cost allocation tag
         var createBudgetResponse = await budgetsClient.CreateBudgetAsync(new CreateBudgetRequest
         {
             AccountId = acountId,

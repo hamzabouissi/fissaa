@@ -133,7 +133,7 @@ Resources:
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId:
-        Fn::ImportValue: !Join [":", [!Ref "StackName", "VPCId"]]
+        Fn::ImportValue: !Join [":", [!Ref "Vpc-Stack", "Vpc"]]
   LoadBalancerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:

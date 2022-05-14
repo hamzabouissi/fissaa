@@ -1,5 +1,4 @@
 using Amazon;
-using Amazon.CertificateManager;
 using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
 using Amazon.Route53;
@@ -9,22 +8,21 @@ using CSharpFunctionalExtensions;
 using Tag = Amazon.CloudFormation.Model.Tag;
 using Task = System.Threading.Tasks.Task;
 
-namespace fissaa;
+namespace fissaa.CloudProvidersServices;
 
 public class AwsDomainService
 {
     public readonly RegionEndpoint Region = RegionEndpoint.USEast1;
-    private readonly AmazonRoute53Client route53Client;
-    private readonly AmazonCertificateManagerClient acmClient;
-    private readonly AmazonCloudFormationClient clientCformation;
-    private readonly AwsUtilFunctions awsUtilFunctions;
+    private readonly AmazonRoute53Client _route53Client;
+    private readonly AmazonCloudFormationClient _clientCformation;
+    private readonly AwsUtilFunctions _awsUtilFunctions;
 
     public AwsDomainService(string awsSecretKey,string awsAccessKey)
     {
         var auth = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
-        route53Client = new AmazonRoute53Client(auth, Region);
-        clientCformation = new AmazonCloudFormationClient(auth,Region);
-        awsUtilFunctions = new AwsUtilFunctions(awsSecretKey, awsAccessKey,String.Empty);
+        _route53Client = new AmazonRoute53Client(auth, Region);
+        _clientCformation = new AmazonCloudFormationClient(auth,Region);
+        _awsUtilFunctions = new AwsUtilFunctions(awsSecretKey, awsAccessKey);
 
     }
 
@@ -37,7 +35,7 @@ public class AwsDomainService
             throw new ArgumentException("domain already Created");
         }
 
-        var response = await route53Client.CreateHostedZoneAsync(new CreateHostedZoneRequest()
+        var response = await _route53Client.CreateHostedZoneAsync(new CreateHostedZoneRequest()
         {
             Name = domainName,
             CallerReference = Guid.NewGuid().ToString()
@@ -51,7 +49,7 @@ public class AwsDomainService
 
     private async Task<bool> DomainNameExist(string domainName)
     {
-        var zonesByNameResponse = await route53Client.ListHostedZonesByNameAsync(new ListHostedZonesByNameRequest
+        var zonesByNameResponse = await _route53Client.ListHostedZonesByNameAsync(new ListHostedZonesByNameRequest
         {
             DNSName = domainName,
             MaxItems = "1"
@@ -60,7 +58,7 @@ public class AwsDomainService
     }
     public async Task<string> GetHostedZoneId(string domainName)
     {
-        var listHostedZonesByNameResponse=  await route53Client.ListHostedZonesByNameAsync(new ListHostedZonesByNameRequest
+        var listHostedZonesByNameResponse=  await _route53Client.ListHostedZonesByNameAsync(new ListHostedZonesByNameRequest
         {
             DNSName = domainName,
         });
@@ -70,21 +68,21 @@ public class AwsDomainService
         return domain.Id.Split("/")[^1];
     }
 
-    public async Task<Result<StackStatus?>> AddHttps(string domainName)
+    public async Task<Result> AddHttps(string domainName)
     {
         
-        var cloudFile = await awsUtilFunctions.ExtractTextFromRemoteFile("https://fissaa-cli.s3.amazonaws.com/test/domain_certificate.yml");
+        var cloudFile = await _awsUtilFunctions.ExtractTextFromRemoteFile("https://fissaa-cli.s3.amazonaws.com/test/domain_certificate.yml");
         var baseDomain = string.Join(".",domainName.Split(".")[^2..]); 
         
         var hostedZoneId = await GetHostedZoneId(baseDomain);
-        var domain_for_stack = baseDomain.Replace(".", "-");   
-        var stackName = $"{domain_for_stack}-certificate-stack";
+        var domainForStack = baseDomain.Replace(".", "-");   
+        var stackName = $"{domainForStack}-certificate-stack";
         
-        var status = await awsUtilFunctions.GetStackStatus(stackName);
-        if (awsUtilFunctions.StackStatusIsSuccessfull(status))
+        var status = await _awsUtilFunctions.GetStackStatus(stackName);
+        if (_awsUtilFunctions.StackStatusIsSuccessfull(status))
             return Result.Success(status);
         
-        await clientCformation.CreateStackAsync(new CreateStackRequest
+        await _clientCformation.CreateStackAsync(new CreateStackRequest
         {
             OnFailure = OnFailure.DELETE,
             Parameters = new List<Parameter>
@@ -112,8 +110,8 @@ public class AwsDomainService
                 }
             } 
         });
-        await awsUtilFunctions.WaitUntilStackCreatedOrDeleted(stackName);
-        status = await awsUtilFunctions.GetStackStatus(stackName);
-        return awsUtilFunctions.StackStatusIsSuccessfull(status) ? Result.Success(status): Result.Failure<StackStatus>("creating https failed") ;
+        await _awsUtilFunctions.WaitUntilStackCreatedOrDeleted(stackName);
+        status = await _awsUtilFunctions.GetStackStatus(stackName);
+        return _awsUtilFunctions.StackStatusIsSuccessfull(status) ? Result.Success(status): Result.Failure("creating https failed") ;
     }
 }

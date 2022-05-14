@@ -1,0 +1,11 @@
+Parameters:
+  BucketName:
+    Description: Main Network Stack Name contains ( VPC,ALB,SUBNETS..)
+    Type: String
+Resources:
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Retain
+    Properties:
+      AccessControl: PublicRead
+      BucketName: !Ref BucketName

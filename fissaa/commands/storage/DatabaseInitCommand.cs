@@ -1,3 +1,5 @@
+using fissaa.CloudProvidersServices;
+using fissaa.commands.Templates;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -7,8 +9,51 @@ public class DatabaseInitCommand:AsyncCommand<DatabaseInitSettings>
 {
     public override async Task<int> ExecuteAsync(CommandContext context, DatabaseInitSettings settings)
     {
-        var awsdb = new AwsDBStack(settings.AwsSecretKey,settings.AwsAcessKey,settings.Project);
-        await awsdb.init("database",settings.DbName,settings.DbType ,settings.DBUsername,settings.DBPassword);
+        var awsNetworkService = new AwsNetworkService(settings.AwsSecretKey,settings.AwsAcessKey,settings.DomainName);
+        var awsdb = new AwsStorageStack(settings.AwsSecretKey,settings.AwsAcessKey);
+        await AnsiConsole.Status()
+            .AutoRefresh(true)
+            .Spinner(Spinner.Known.Dots9)
+            .SpinnerStyle(Style.Parse("yellow bold"))
+            .StartAsync("Creating database started", async ctx =>
+            {
+                ctx.Status("Create Vpc ");
+                var vpcCreateResult =  await awsNetworkService.CreateVpc();
+                if (vpcCreateResult.IsFailure)
+                {
+                    AnsiConsole.MarkupLine($"[red]{vpcCreateResult.Error}[/]");
+                    return ;
+                }
+                
+                ctx.Status("Create Network ");
+                var networkServiceResult =  await awsNetworkService.Create();
+                if (networkServiceResult.IsFailure)
+                {
+                    AnsiConsole.MarkupLine($"[red]{networkServiceResult.Error}[/]");
+                    return ;
+                }
+
+                ctx.Status("Create Database ");
+                var databaseAuth = new DatabaseAuth
+                {
+                    dbName = settings.DbName,
+                    username = "ghost",
+                    password = "ghostPassword",
+                    engine =  settings.DbType,
+                    storage=settings.DBAllocatedStorage
+                };
+                var result = await awsdb.InitDb(databaseAuth);
+                if (result.IsFailure)
+                {
+                    AnsiConsole.MarkupLine($"[red]{result.Error}[/]");
+                    return ;
+                }
+                var databaseAuthInfo = await awsdb.DescribeDatabase(settings.DbName);
+                foreach (var output in databaseAuthInfo)
+                {
+                    AnsiConsole.MarkupLine($"[grey]{output.OutputKey}: {output.OutputValue} [/]");
+                }
+            });
         return 0;
     }
     

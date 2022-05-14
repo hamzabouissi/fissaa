@@ -1,9 +1,6 @@
 
 
 Parameters:
-  NetworkStackName:
-    Description: Main Network Stack Name contains ( VPC,ALB,SUBNETS..)
-    Type: String
   AllocatedStorage:
     Description: The allocated storage size, specified in gigabytes (GB).
     Default: 20
@@ -65,44 +62,20 @@ Parameters:
     
     
 Resources:
-  DBPublicSubnetOne:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AvailabilityZone:
-        Fn::Select:
-          - 0
-          - Fn::GetAZs: { Ref: "AWS::Region" }
-      VpcId:
-        Fn::ImportValue: !Join [":", [!Ref "NetworkStackName", "VPCId"]]
-      CidrBlock: "10.0.105.0/24"
-      MapPublicIpOnLaunch: false
-    
-  DBPublicSubnetTwo:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AvailabilityZone:
-        Fn::Select:
-          - 1
-          - Fn::GetAZs: { Ref: "AWS::Region" }
-      VpcId:
-        Fn::ImportValue: !Join [":", [!Ref "NetworkStackName", "VPCId"]]
-      CidrBlock: "10.0.106.0/24"
-      MapPublicIpOnLaunch: false
-  
   DBSubnetSecurityGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
       DBSubnetGroupDescription: "Db subnets groups"
       SubnetIds:
-        - !Ref "DBPublicSubnetOne"
-        - !Ref "DBPublicSubnetTwo"
+        - Fn::ImportValue: !Join [":", ["Network-Stack", "PrivateSubnetOne"]]
+        - Fn::ImportValue: !Join [":", ["Network-Stack", "PrivateSubnetTwo"]]
   
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: security group for vpc database 
-      VpcId: 
-        Fn::ImportValue: !Join [":", [!Ref "NetworkStackName", "VPCId"]]
+      VpcId:
+        Fn::ImportValue: !Join [":", ["Vpc-Stack", "Vpc"]]
 
   DBSecurityGroupIngressFromEcs:
     Type: AWS::EC2::SecurityGroupIngress
@@ -110,8 +83,7 @@ Resources:
       Description: Ingress from the ECS 
       GroupId: !Ref "DBSecurityGroup"
       IpProtocol: -1
-      SourceSecurityGroupId:
-        Fn::ImportValue: !Join [":", [!Ref "NetworkStackName", "ECSSecurityGroup"]]
+      CidrIp: "0.0.0.0/0"
         
         
   RDSInstance:

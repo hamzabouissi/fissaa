@@ -1,3 +1,4 @@
+using fissaa.CloudProvidersServices;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -18,6 +19,8 @@ public class AppDestroyCommand:AsyncCommand<AppDestroyCommandSettings>
                 await appService.Destroy();
                 if (settings.All)
                 {
+                    ctx.Status("Deleting Load Balancer ");
+                    await networkService.DestroyLoadBalancer();
                     ctx.Status("Deleting Network ");
                     await networkService.Destroy();
                 }

@@ -16,8 +16,8 @@ public class StorageSettings:CommandSettings
     public string AwsAcessKey { get; set; }
     
     [Description("project-name must be unique across your aws account")]
-    [CommandArgument( 0,"<project-name>")]
-    public string Project { get; set; }
+    [CommandArgument( 2,"<project-name>")]
+    public string DomainName { get; set; }
     
    
 }
@@ -27,7 +27,7 @@ public class DatabaseInitSettings:StorageSettings
 {
     
     
-    [Description("your database size on GB minumum: 20GB")]
+    [Description("different db type allowed values are:  mysql, mariadb, postgres")]
     [CommandArgument( 0,"<db-type>")]
     public string DbType { get; set; }
     
@@ -51,4 +51,19 @@ public class DatabaseInitSettings:StorageSettings
 public class DbDestroySetting : StorageSettings
 {
     
+}
+
+
+public class S3InitSettings:StorageSettings
+{
+    
+    
+    [Description("s3 bucket name")]
+    [CommandArgument( 0,"<bucket-name>")]
+    public string BucketName { get; set; }
+    
+    
+   
+
+
 }
