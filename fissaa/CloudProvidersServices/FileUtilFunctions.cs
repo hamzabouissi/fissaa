@@ -5,12 +5,12 @@ namespace fissaa.CloudProvidersServices;
 public class FileUtilFunctions
 {
 
-    public void DeleteEnvFile()
+    public static void DeleteEnvFile()
     {
         File.Delete("env.txt");
     }
 
-    public void CreateEnvFile(string accessKey,string secretKey,string region, string domainName,
+    public static void CreateGhostEnvFile(string accessKey,string secretKey,string region, string domainName,
         DatabaseAuth dbAuth,string bucketName,MailAuth mailAuth)
     {
         var smtp = mailAuth.MailProvider switch
@@ -38,5 +38,15 @@ public class FileUtilFunctions
         File.AppendAllText("env.txt",$"url=https://{domainName}/\n");
         File.AppendAllText("env.txt","NODE_ENV=production\n");
 
+    }
+
+    public static void CreateAwsCreedentailsFile(string secret_key,string access_key)
+    {
+        var secret = $"secret_key={secret_key}" + Environment.NewLine;
+        var access = $"access_key={access_key}"+ Environment.NewLine;
+        File.WriteAllText(".aws_creedentials.txt", string.Concat(secret,access));
+
+        // File.AppendAllText(".aws_creedentials.txt",$"secret_key={secret_key}\n");
+        // File.AppendAllText(".aws_creedentials.txt",$"access_key={access_key}");
     }
 }

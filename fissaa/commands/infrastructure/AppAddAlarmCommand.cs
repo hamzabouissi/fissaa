@@ -1,4 +1,3 @@
-using CSharpFunctionalExtensions;
 using fissaa.CloudProvidersServices;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -15,7 +14,7 @@ public class AppAddAlarmCommand:AsyncCommand<AppAddAlarmSettings>
             .AutoRefresh(true)
             .Spinner(Spinner.Known.Dots9)
             .SpinnerStyle(Style.Parse("yellow bold"))
-            .StartAsync("Creating Alarm Started", async ctx =>
+            .StartAsync(":bell: Creating Alarm Started", async ctx =>
             {
                 var result = await appService.CreateAlarm(settings.Email);
                 if (result.IsFailure)
@@ -23,5 +22,10 @@ public class AppAddAlarmCommand:AsyncCommand<AppAddAlarmSettings>
                 AnsiConsole.MarkupLine($"[green]done[/]");
             });
         return 0;
+    }
+    
+    public override ValidationResult Validate(CommandContext context, AppAddAlarmSettings settings)
+    {
+        return settings.Validate();
     }
 }

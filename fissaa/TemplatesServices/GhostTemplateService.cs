@@ -7,7 +7,6 @@ namespace fissaa.TemplatesServices;
 
 public class GhostTemplateService
 {
-    private readonly FileUtilFunctions _fileUtilFunctions;
     private readonly string _secretKey;
     private readonly string _accessKey;
     private readonly AwsUtilFunctions _awsUtilFunctions;
@@ -24,16 +23,15 @@ public class GhostTemplateService
         
         _ecsService = new AwsEcsService(_secretKey,awsAccessKey,_domainName);
         _awsUtilFunctions = new AwsUtilFunctions(awsSecretKey, awsAccessKey);
-        _fileUtilFunctions = new FileUtilFunctions();
 
     }
     public async Task<Result> CreateGhost(string s3BucketName, DatabaseAuth databaseAuth, MailAuth mailAuth)
     {
         // Create  and Host an Env File
-        _fileUtilFunctions.CreateEnvFile(_accessKey,_secretKey, Region.SystemName,_domainName,databaseAuth,s3BucketName,mailAuth);
+        FileUtilFunctions.CreateGhostEnvFile(_accessKey,_secretKey, Region.SystemName,_domainName,databaseAuth,s3BucketName,mailAuth);
         await _awsUtilFunctions.UploadS3File(File.OpenRead("env.txt"),s3BucketName,"env_file.env");
-        _fileUtilFunctions.DeleteEnvFile();
+        FileUtilFunctions.DeleteEnvFile();
         // deployment
-        return await _ecsService.Create(ContainerTemplate.Ghost, string.Empty, false,$"{s3BucketName}/env_file.env");
+        return await _ecsService.Create(ContainerTemplate.Ghost, string.Empty, false,$"{s3BucketName}/env_file.env",AppEnvironment.Prod);
     }
 }

@@ -1,7 +1,8 @@
+using fissaa.commands.infrastructure;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
-namespace fissaa.commands.infrastructure;
+namespace fissaa.commands.Budget;
 
 public class BudgetDeleteCommand:AsyncCommand<BudgetDeleteCommandSettings>
 {

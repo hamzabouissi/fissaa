@@ -5,19 +5,14 @@ using Spectre.Console.Cli;
 namespace fissaa.commands.storage;
 
 
-public class StorageSettings:CommandSettings
+public class StorageSettings:AwsCreedentialsSettings
 {
    
     
-    [CommandArgument(0,"<aws-secret-key>")]
-    public string AwsSecretKey { get; set; }
-    
-    [CommandArgument(1,"<aws-access-key>")]
-    public string AwsAcessKey { get; set; }
     
     [Description("project-name must be unique across your aws account")]
     [CommandArgument( 2,"<project-name>")]
-    public string DomainName { get; set; }
+    public string ProjectName { get; set; }
     
    
 }

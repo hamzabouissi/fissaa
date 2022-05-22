@@ -1,4 +1,5 @@
 using fissaa.CloudProvidersServices;
+using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace fissaa.commands.infrastructure;
@@ -10,6 +11,11 @@ public class AppRollbackListCommand:AsyncCommand<AppRollbackListSetting>
         var appService = new AwsEcsService(settings.AwsSecretKey,settings.AwsAcessKey,settings.DomainName);
         await appService.RollBackList();
         return 0;
+    }
+    
+    public override ValidationResult Validate(CommandContext context, AppRollbackListSetting settings)
+    {
+        return settings.Validate();
     }
 }
 

@@ -69,7 +69,7 @@ public class AwsEcsService
     }
 
     public async Task<Result> Create(ContainerTemplate template, string dockerfile,
-        bool addMonitor,string envFile)
+        bool addMonitor,string envFile,AppEnvironment appEnvironment)
     {
         var cloudFile = await _awsUtilFunctions.ExtractTextFromRemoteFile("https://fissaa-cli.s3.amazonaws.com/test/service.yml");
         var baseDomain = string.Join(".", _domainName.Split(".")[^2..]);
@@ -78,7 +78,7 @@ public class AwsEcsService
         if (template == ContainerTemplate.App)
             dockerImage = await ImageDeployment(dockerfile);
         var priorityNumber = await _awsUtilFunctions.GetListenerRuleNextPriorityNumber(AlbStackName);
-        var taskDefinition = await CreateTaskDefinition(template,AppEnvironment.Dev, dockerImage, addMonitor,envFile);
+        var taskDefinition = await CreateTaskDefinition(template,appEnvironment, dockerImage, addMonitor,envFile);
         try
         {
             var parameters = CreateEcsCloudformationParameters(template,taskDefinition, priorityNumber, hostedZoneId);
@@ -108,6 +108,11 @@ public class AwsEcsService
                 {
                     Key = "app-domain",
                     Value = _baseDomain
+                },
+                new()
+                {
+                    Key = "app-domain",
+                    Value = _domainName
                 }
             }
         });
@@ -449,16 +454,30 @@ public class AwsEcsService
                 {
                     Key = "app-domain",
                     Value = _baseDomain
+                },
+                new()
+                {
+                    Key = "app-domain",
+                    Value = _domainName
                 }
         
             }
         });
-        Console.WriteLine("Waiting Stack");
         await _awsUtilFunctions.WaitUntilStackCreatedOrDeleted(AlarmStackName);
         var status = await _awsUtilFunctions.GetStackStatus(AlarmStackName);
         return _awsUtilFunctions.StackStatusIsSuccessfull(status)
             ? Result.Success(status)
             : Result.Failure("creating alarm failed");
+    }
+    
+    public async Task<Result> DeleteAlarm(string email)
+    {
+        await ClientCformation.DeleteStackAsync(new DeleteStackRequest
+        {
+
+            StackName = AlarmStackName
+        });
+        return Result.Success();
     }
 
     // public async Task Exec()

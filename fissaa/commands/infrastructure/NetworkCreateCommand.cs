@@ -34,7 +34,7 @@ public class NetworkCreateCommand:AsyncCommand<NetworkCreateCommandSettings>
                     return;
                 }
 
-                AnsiConsole.MarkupLine("TLS Certificate Added :check_mark_button: ");
+                AnsiConsole.MarkupLine(":locked: TLS Certificate Added :check_mark_button: ");
 
                 ctx.Status("Create Network infrastructure");
                 var networkResult = await networkService.Create();
@@ -43,7 +43,7 @@ public class NetworkCreateCommand:AsyncCommand<NetworkCreateCommandSettings>
                     AnsiConsole.MarkupLine($"[red]{networkResult.Error}[/]");
                     return;
                 }
-                AnsiConsole.MarkupLine("Network Created :check_mark_button: ");
+                AnsiConsole.MarkupLine(":chains: Network Created :check_mark_button: ");
             });
             return 0;
     }

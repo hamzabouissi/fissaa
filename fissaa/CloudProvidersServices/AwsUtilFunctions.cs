@@ -14,6 +14,7 @@ using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
 using CliWrap;
 using CliWrap.Buffered;
+using CliWrap.EventStream;
 using Flurl.Http;
 using Task = System.Threading.Tasks.Task;
 
@@ -223,6 +224,12 @@ public class AwsUtilFunctions
 
     public static async Task LoginToRegistry(string decodeToken, string registry)
     {
+        
+        await Cli.Wrap("docker")
+            .WithArguments(args => args
+                .Add("logout"))
+            .WithValidation(CommandResultValidation.ZeroExitCode)
+            .ExecuteBufferedAsync();
         await Cli.Wrap("docker")
             .WithArguments(args => args
                 .Add("login")
@@ -245,6 +252,25 @@ public class AwsUtilFunctions
             )
             .WithValidation(CommandResultValidation.ZeroExitCode)
             .ExecuteBufferedAsync();
+        // {
+        //     switch (cmdEvent)
+        //     {
+        //         case StandardOutputCommandEvent stdOut:
+        //             Console.WriteLine($"Out> {stdOut.Text}");
+        //             break;
+        //         case StandardErrorCommandEvent stdErr:
+        //             Console.WriteLine($"Err> {stdErr.Text}");
+        //             break;
+        //     }
+        // }
+        // await Cli.Wrap("docker")
+        //     .WithArguments(args => args
+        //         .Add("push")
+        //         .Add(imageName)
+        //     )
+        //     .WithValidation(CommandResultValidation.ZeroExitCode)
+        //     .WithStandardOutputPipe(PipeTarget.ToStream(output))
+        //     .ExecuteBufferedAsync();
      
     }
     public async Task DeleteEcrImages(string repo)

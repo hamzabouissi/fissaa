@@ -2,32 +2,37 @@ using System.Net;
 using Amazon;
 using Amazon.Budgets;
 using Amazon.Budgets.Model;
+using Amazon.CostExplorer;
+using Amazon.CostExplorer.Model;
 using Amazon.Runtime;
 using CSharpFunctionalExtensions;
 using fissaa.CloudProvidersServices;
+using Subscriber = Amazon.Budgets.Model.Subscriber;
 
 namespace fissaa;
 
 public class AwsBudgetService
 {
     public readonly RegionEndpoint Region = RegionEndpoint.USEast1;
-    private readonly AmazonBudgetsClient budgetsClient;
-    private readonly AwsUtilFunctions awsUtilFunctions;
+    private readonly AmazonBudgetsClient _budgetsClient;
+    private readonly AwsUtilFunctions _awsUtilFunctions;
+    private readonly AmazonCostExplorerClient _costExplorerClient;
 
     public AwsBudgetService(string awsSecretKey,string awsAccessKey)
     {
         var auth = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
-        budgetsClient = new AmazonBudgetsClient(auth, Region);
-        awsUtilFunctions = new AwsUtilFunctions(awsSecretKey, awsAccessKey);
+        _budgetsClient = new AmazonBudgetsClient(auth, Region);
+        _costExplorerClient = new AmazonCostExplorerClient(auth, Region);
+        _awsUtilFunctions = new AwsUtilFunctions(awsSecretKey, awsAccessKey);
 
     }
 
     public async Task<Result> Create(string domainName,string email,decimal budget,decimal limit)
     {
-        var acountId = await awsUtilFunctions.GetAccountId();
+        var acountId = await _awsUtilFunctions.GetAccountId();
         var baseDomain = domainName;
         var tag = baseDomain;
-        var createBudgetResponse = await budgetsClient.CreateBudgetAsync(new CreateBudgetRequest
+        var createBudgetResponse = await _budgetsClient.CreateBudgetAsync(new CreateBudgetRequest
         {
             AccountId = acountId,
             Budget = new Budget
@@ -79,12 +84,51 @@ public class AwsBudgetService
 
     public async Task<Result> Delete(string domainName)
     {
-        var acountId = await awsUtilFunctions.GetAccountId();
-        await budgetsClient.DeleteBudgetAsync(new DeleteBudgetRequest
+        var acountId = await _awsUtilFunctions.GetAccountId();
+        await _budgetsClient.DeleteBudgetAsync(new DeleteBudgetRequest
         {
             AccountId = acountId,
             BudgetName = $"{domainName}-cost",
         });
         return Result.Success();
+    }
+
+    public async Task<Dictionary<string, float>> ListCost(string domainName)
+    {
+        var startDate = (DateTime.Today.ToString("yyyy-MM")+"-01");
+        var endDate = DateTime.Today.ToString("yyyy-MM-dd");
+
+        var baseDomain = string.Join(".",domainName.Split(".")[^2..]);
+        var getCostAndUsageResponse = await _costExplorerClient.GetCostAndUsageAsync(new GetCostAndUsageRequest
+        {
+            Granularity = Granularity.DAILY,
+            GroupBy = new List<GroupDefinition>()
+            {
+                new ()
+                {
+                    Key = "app-domain",
+                    Type = GroupDefinitionType.TAG
+                }
+            },
+            Metrics = new List<string>()
+            {
+                "UnblendedCost"
+            },
+            TimePeriod = new DateInterval
+            {
+                End = endDate,
+                Start = startDate
+            }
+        });
+        var pricePerDay = new Dictionary<string, float>();
+        foreach (var costResultByTime in getCostAndUsageResponse.ResultsByTime)
+        {
+            var date = costResultByTime.TimePeriod.Start;
+            var group = costResultByTime.Groups.Single(g => g.Keys.Contains($"app-domain${baseDomain}"));
+            var amount = float.Parse(group.Metrics.First().Value.Amount);
+            pricePerDay.Add(date, amount);
+        }
+
+        return pricePerDay;
     }
 }

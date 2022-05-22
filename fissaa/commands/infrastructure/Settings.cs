@@ -6,15 +6,9 @@ using Spectre.Console.Cli;
 namespace fissaa.commands.infrastructure;
 
 
-public class InfrastructureSettings : CommandSettings
+public class InfrastructureSettings : AwsCreedentialsSettings
 {
     
-    
-    [CommandArgument(0,"<aws-secret-key>")]
-    public string AwsSecretKey { get; set; }
-    
-    [CommandArgument(1,"<aws-access-key>")]
-    public string AwsAcessKey { get; set; }
     
     [Description("it must be registred on route53 or any domain registrar")]
     [CommandArgument(2,"<domain>")]
@@ -38,6 +32,8 @@ public sealed class AppLogsommandSettings : InfrastructureSettings
 
     public override ValidationResult Validate()
     {
+        
+        
         var parsed = DateTime.TryParseExact(StartDate, formats,null,
             System.Globalization.DateTimeStyles.AllowWhiteSpaces |
             System.Globalization.DateTimeStyles.AdjustToUniversal,out var parsedStartDate);
@@ -45,7 +41,7 @@ public sealed class AppLogsommandSettings : InfrastructureSettings
             return ValidationResult.Error("--start-date isn't valid");
         if (Hour>5 || Hour <0)
             return ValidationResult.Error("--hour range 0,5");
-        return ValidationResult.Success();
+        return base.Validate();
     }
 
     public readonly string[] formats = 
@@ -65,10 +61,10 @@ public sealed class AppDestroyCommandSettings : InfrastructureSettings
 public sealed class AppCreateCommandSettings : InfrastructureSettings
 {
     
-    [Description("Environment are: dev, staging, prod")]
+    [Description("Environment are: Dev, Prod")]
     [CommandOption("--environment")]
-    [DefaultValue("dev")]
-    public string Environment { get; set; } = "dev"; 
+    [DefaultValue("Dev")]
+    public string Environment { get; set; } = "Dev"; 
     
     
     [Description("Models are: pay-as-you-go,static")]
@@ -86,15 +82,6 @@ public sealed class AppCreateCommandSettings : InfrastructureSettings
     [DefaultValue("./")]
     public string DockerfilePath { get; set; } = "./";
    
-    // [CommandOption("--create-dockerfile")]
-    // [DefaultValue(false)]
-    // public bool CreateDockerfile { get; set; } = false;
-    //
-    // [Description("describe your project framework, valid options:Fastapi, AspNetCore, NodeJs")]
-    // [CommandOption("--project-type")] 
-    // public string? ProjectType { get; set; } = null;
-    
-    
 
 
     public override ValidationResult Validate()
@@ -102,12 +89,8 @@ public sealed class AppCreateCommandSettings : InfrastructureSettings
         var validationResult = base.Validate();
         if (!validationResult.Successful)
             return validationResult;
-        // if (CreateDockerfile)
-        // {
-        //     return ProjectTypeChoices.Exists(p => p == ProjectType)
-        //         ? ValidationResult.Success()
-        //         : ValidationResult.Error("--project-type choice is wrong");
-        // }
+        if (Environment.ToLower() != "dev" && Environment.ToLower() != "prod")
+           return ValidationResult.Error("Environment must be: Dev or Prod");
         return ValidationResult.Success();
        
     }
@@ -133,7 +116,6 @@ public class AppRollbackApplySetting : InfrastructureSettings
 public class AppRollbackListSetting : InfrastructureSettings
 {
 }
-
 
 public class AppAddAlarmSettings : InfrastructureSettings
 {

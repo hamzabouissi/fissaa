@@ -25,5 +25,9 @@ public class AppRollbackApplyCommand:AsyncCommand<AppRollbackApplySetting>
             });
         return 0;
     }
+    public override ValidationResult Validate(CommandContext context, AppRollbackApplySetting settings)
+    {
+        return settings.Validate();
+    }
 }
 

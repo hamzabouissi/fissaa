@@ -2,6 +2,7 @@ using Amazon;
 using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
 using Amazon.Runtime;
+using Amazon.S3;
 using CSharpFunctionalExtensions;
 using fissaa.commands.Templates;
 
@@ -14,15 +15,15 @@ public class AwsStorageStack
     private string S3StackName(string name) => $"{name}-s3-stack";
     private RegionEndpoint Region { get; set; } = RegionEndpoint.USEast1;
     private readonly AwsUtilFunctions _awsUtilFunctions;
-   
+    private readonly AmazonS3Client _s3Client;
 
-    
-    
+
     public AwsStorageStack(string awsSecretKey,string awsAccessKey)
     {
         
         var auth = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
         _clientCformation = new AmazonCloudFormationClient(auth,Region);
+        _s3Client = new AmazonS3Client();
         _awsUtilFunctions = new AwsUtilFunctions(awsSecretKey, awsAccessKey);
     }
 
@@ -65,7 +66,8 @@ public class AwsStorageStack
                 Parameters = parameters,
                 StackName = DbStackName(databaseAuth.dbName),
                 TemplateURL = "https://fissaa-cli.s3.amazonaws.com/test/database.yml",
-                TimeoutInMinutes = 20
+                TimeoutInMinutes = 20,
+               
             });
         }
         catch (AlreadyExistsException)
@@ -117,7 +119,7 @@ public class AwsStorageStack
         {
             await _clientCformation.CreateStackAsync(new CreateStackRequest
             {
-                OnFailure = OnFailure.DELETE,
+                OnFailure = OnFailure.DO_NOTHING,
                 Parameters = parameters,
                 StackName = S3StackName(bucketName),
                 TemplateURL = "https://fissaa-cli.s3.amazonaws.com/test/bucket.yml",
@@ -127,7 +129,6 @@ public class AwsStorageStack
         catch (AlreadyExistsException)
         {
         }
-      
         await _awsUtilFunctions.WaitUntilStackCreatedOrDeleted(S3StackName(bucketName));
         var stackStatus = await _awsUtilFunctions.GetStackStatus(S3StackName(bucketName));
         return _awsUtilFunctions.StackStatusIsSuccessfull(stackStatus) ? Result.Success() : Result.Failure("Failed");

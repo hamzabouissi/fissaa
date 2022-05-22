@@ -44,7 +44,7 @@ public class AppCreateCommand:AsyncCommand<AppCreateCommandSettings>
                     AnsiConsole.MarkupLine($"[red]{addHttpsResult.Error}[/]");
                     return;
                 }
-                AnsiConsole.MarkupLine("TLS Certificate Added :check_mark_button: ");
+                AnsiConsole.MarkupLine(":locked: TLS Certificate Added :check_mark_button: ");
                 
                 ctx.Status("Create Network infrastructure");
                 var networkResult = await networkService.Create();
@@ -53,7 +53,7 @@ public class AppCreateCommand:AsyncCommand<AppCreateCommandSettings>
                     AnsiConsole.MarkupLine($"[red]{networkResult.Error}[/]");
                     return;
                 }        
-                AnsiConsole.MarkupLine("Network Created :check_mark_button: ");
+                AnsiConsole.MarkupLine(":chains: Network Created :check_mark_button: ");
                 
                 ctx.Status("Create Load Balancer ");
                 Result albCreateResult = await networkService.CreateAlb();
@@ -62,16 +62,21 @@ public class AppCreateCommand:AsyncCommand<AppCreateCommandSettings>
                     AnsiConsole.MarkupLine($"[red]{albCreateResult.Error}[/]");
                     return;
                 }
-                AnsiConsole.MarkupLine("Load Balancer Created :check_mark_button: ");
+                AnsiConsole.MarkupLine(":bridge_at_night: Load Balancer Created :check_mark_button: ");
                 ctx.Spinner(Spinner.Known.Monkey);
                 ctx.Status("Deploy App");
-                var appResult = await appService.Create(ContainerTemplate.App,settings.DockerfilePath,settings.AddMonitor,String.Empty);
+                var appEnvironment = AppEnvironment.Dev;
+                if (settings.Environment == "Prod")
+                     appEnvironment = AppEnvironment.Prod;
+                
+                var appResult = await appService.Create(ContainerTemplate.App,settings.DockerfilePath,settings.AddMonitor,String.Empty,appEnvironment);
                 if (appResult.IsFailure)
                 {
                     AnsiConsole.MarkupLine($"[red]{appResult.Error}[/]");
                     return;
                 }    
                 AnsiConsole.MarkupLine("App Deployed :check_mark_button: ");
+                AnsiConsole.MarkupLine($"[grey]Visit https://{settings.DomainName}[/]");
             });
         return 0;
     }

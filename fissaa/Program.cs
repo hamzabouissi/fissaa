@@ -1,6 +1,9 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using fissaa;
+using fissaa.commands;
+using fissaa.commands.Budget;
 using fissaa.commands.domain;
+using fissaa.commands.Env;
 using fissaa.commands.infrastructure;
 using fissaa.commands.storage;
 using fissaa.commands.Templates;
@@ -30,6 +33,7 @@ app.Configure(config =>
     {
         budg.AddCommand<BudgetCreateCommand>("create");
         budg.AddCommand<BudgetDeleteCommand>("delete");
+        budg.AddCommand<BudgetShowCommand>("cost-list");
     });
     config.AddBranch<DomainSettings>("domain", command =>
     {
@@ -52,6 +56,10 @@ app.Configure(config =>
     config.AddBranch<TemplateSettings>("template", command =>
     {
         command.AddCommand<TemplateUseCommand>("use");
+    });
+    config.AddBranch("env", command =>
+    {
+        command.AddCommand<EnvInitCommand>("init");
     });
 });
 return await app.RunAsync(args);

@@ -48,7 +48,7 @@ public class TemplateUseCommand:AsyncCommand<TemplateUseSettings>
                         AnsiConsole.MarkupLine($"[red]{addHttpsResult.Error}[/]");
                         return;
                     }
-                    AnsiConsole.MarkupLine("TLS Certificate Added :check_mark_button: ");
+                    AnsiConsole.MarkupLine(":locked: TLS Certificate Added :check_mark_button: ");
                 
                     ctx.Status("Create Network infrastructure");
                     var networkResult = await networkService.Create();
@@ -66,7 +66,7 @@ public class TemplateUseCommand:AsyncCommand<TemplateUseSettings>
                         AnsiConsole.MarkupLine($"[red]{createDatabaseResult.Error}[/]");
                         return;
                     }
-                    AnsiConsole.MarkupLine(" Database Created :check_mark_button: ");
+                    AnsiConsole.MarkupLine(" :classical_building: Database Created :check_mark_button: ");
                     
                     ctx.Status("Creating S3 Storage ");
                     var createS3EResult = await appStorage.InitS3(s3BucketName);
@@ -75,7 +75,7 @@ public class TemplateUseCommand:AsyncCommand<TemplateUseSettings>
                         AnsiConsole.MarkupLine($"[red]{createS3EResult.Error}[/]");
                         return;
                     }
-                    AnsiConsole.MarkupLine("S3 Bucket Created :check_mark_button: ");
+                    AnsiConsole.MarkupLine(":cloud:	 S3 Bucket Created :check_mark_button: ");
                     var mailAuth = new MailAuth
                     {
                         MailPassword=settings.MailPassword,
@@ -89,11 +89,15 @@ public class TemplateUseCommand:AsyncCommand<TemplateUseSettings>
                         AnsiConsole.MarkupLine($"[red]{deployAppResult.Error}[/]");
                         return;
                     }
-                    AnsiConsole.MarkupLine("Ghost Deployed :check_mark_button: ");
+                    AnsiConsole.MarkupLine(":ghost:	Ghost Deployed :check_mark_button: ");
                     AnsiConsole.MarkupLine($"Visit https://{settings.DomainName}");
                 });
         }
        
         return 0;
+    }
+    public override ValidationResult Validate(CommandContext context, TemplateUseSettings settings)
+    {
+        return settings.Validate();
     }
 }

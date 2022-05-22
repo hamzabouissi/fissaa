@@ -12,6 +12,11 @@ public class AppLogsCommand:AsyncCommand<AppLogsommandSettings>
         await appService.ListLogs(settings.StartDate,settings.Hour);
         return 0;
     }
+    
+    public override ValidationResult Validate(CommandContext context, AppLogsommandSettings settings)
+    {
+        return settings.Validate();
+    }
 
     
     

@@ -9,7 +9,7 @@ public class DatabaseInitCommand:AsyncCommand<DatabaseInitSettings>
 {
     public override async Task<int> ExecuteAsync(CommandContext context, DatabaseInitSettings settings)
     {
-        var awsNetworkService = new AwsNetworkService(settings.AwsSecretKey,settings.AwsAcessKey,settings.DomainName);
+        var awsNetworkService = new AwsNetworkService(settings.AwsSecretKey,settings.AwsAcessKey,settings.ProjectName);
         var awsdb = new AwsStorageStack(settings.AwsSecretKey,settings.AwsAcessKey);
         await AnsiConsole.Status()
             .AutoRefresh(true)
@@ -24,7 +24,7 @@ public class DatabaseInitCommand:AsyncCommand<DatabaseInitSettings>
                     AnsiConsole.MarkupLine($"[red]{vpcCreateResult.Error}[/]");
                     return ;
                 }
-                
+                AnsiConsole.MarkupLine(":house: Vpc Created :check_mark_button: ");
                 ctx.Status("Create Network ");
                 var networkServiceResult =  await awsNetworkService.Create();
                 if (networkServiceResult.IsFailure)
@@ -32,7 +32,7 @@ public class DatabaseInitCommand:AsyncCommand<DatabaseInitSettings>
                     AnsiConsole.MarkupLine($"[red]{networkServiceResult.Error}[/]");
                     return ;
                 }
-
+                AnsiConsole.MarkupLine(":chains: Network Created :check_mark_button: ");
                 ctx.Status("Create Database ");
                 var databaseAuth = new DatabaseAuth
                 {

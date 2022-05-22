@@ -80,7 +80,7 @@ public class AwsDomainService
         
         var status = await _awsUtilFunctions.GetStackStatus(stackName);
         if (_awsUtilFunctions.StackStatusIsSuccessfull(status))
-            return Result.Success(status);
+            return Result.Success();
         
         await _clientCformation.CreateStackAsync(new CreateStackRequest
         {
@@ -112,6 +112,6 @@ public class AwsDomainService
         });
         await _awsUtilFunctions.WaitUntilStackCreatedOrDeleted(stackName);
         status = await _awsUtilFunctions.GetStackStatus(stackName);
-        return _awsUtilFunctions.StackStatusIsSuccessfull(status) ? Result.Success(status): Result.Failure("creating https failed") ;
+        return _awsUtilFunctions.StackStatusIsSuccessfull(status) ? Result.Success(): Result.Failure("creating https failed") ;
     }
 }
