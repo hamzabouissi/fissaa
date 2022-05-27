@@ -5,17 +5,8 @@ namespace fissaa.Decorator;
 public static class ConsoleDisplayDecorator
 {
 
-
-    public static async Task DisplayStatus(Func<Task> func,string startStatus)
+    public static void Display(string message)
     {
-        await AnsiConsole.Status()
-            .AutoRefresh(true)
-            .Spinner(Spinner.Known.Aesthetic)
-            .SpinnerStyle(Style.Parse("yellow bold"))
-            .StartAsync(startStatus, async ctx =>
-            {
-                await func();
-            });
-        
+       AnsiConsole.MarkupLine($"[grey]Log: {message}[/]");
     }
 }

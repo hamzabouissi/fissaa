@@ -41,10 +41,11 @@ public class AwsEcsService
     private readonly AmazonCloudWatchLogsClient _cloudWatchLogsClient;
     private readonly AmazonECRClient _ecrClient;
     private readonly AmazonECSClient _ecsClient;
+    private readonly Action<string> Display;
 
-    public AwsEcsService(string awsSecretKey,string awsAccessKey, string domainName)
+    public AwsEcsService(string awsSecretKey, string awsAccessKey, string domainName, Action<string>? display = null)
     {
-        
+        Display = display ?? Console.WriteLine;
         var auth = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
         ClientCformation = new AmazonCloudFormationClient(auth,Region);
         _cloudWatchLogsClient = new AmazonCloudWatchLogsClient(auth,region:Region);
@@ -94,7 +95,7 @@ public class AwsEcsService
     private async Task<Result> Deploy(List<Parameter> parameters, string cloudFile)
     {
        
-        Console.WriteLine("Start Deploying");
+        Display("Start Deploying");
         await ClientCformation.CreateStackAsync(new CreateStackRequest
         {
             OnFailure = OnFailure.DELETE,
@@ -116,7 +117,6 @@ public class AwsEcsService
                 }
             }
         });
-        Console.WriteLine("Waiting Stack");
         await _awsUtilFunctions.WaitUntilStackCreatedOrDeleted(ServiceStackName);
         var status = await _awsUtilFunctions.GetStackStatus(ServiceStackName);
         return _awsUtilFunctions.StackStatusIsSuccessfull(status)
@@ -283,12 +283,18 @@ public class AwsEcsService
             {
                 ParameterKey = "ContainerPort",
                 ParameterValue = containerPort
-            }
+            },
+            new()
+            {
+                ParameterKey = "DesiredCount",
+                ParameterValue = "2"
+            },
+            
         };
         return parameters;
     }
 
-    public async Task ListLogs(string startDate,int hour)
+    public async Task<List<OutputLogEvent>> ListLogs(string startDate,int hour)
     {
         try
         {
@@ -299,20 +305,26 @@ public class AwsEcsService
                 LogStreamNamePrefix = ServiceName,
 
             });
-            var logStreamName = logStreamsResponse.LogStreams.Last().LogStreamName;
+            var logStreams = logStreamsResponse.LogStreams;
             DateTime.TryParse(startDate, out var parsedStartDate);
-            Console.WriteLine($"Logs from {parsedStartDate} => {parsedStartDate.AddHours(hour)} from Log Group {ServiceName}");
-            var logsResponse = await _cloudWatchLogsClient.GetLogEventsAsync(new GetLogEventsRequest
+            Display($"Logs from {parsedStartDate} => {parsedStartDate.AddHours(hour)} from Log Group {ServiceName}");
+            var events = new List<OutputLogEvent>();
+            foreach (var logstream in logStreams)
             {
-                // StartTime =  parsedStartDate,
-                // EndTime = parsedStartDate.AddHours(hour),
-                Limit = 500,
-                LogGroupName = ServiceName,
-                LogStreamName = logStreamName,
-                StartFromHead = false,
-            });
-            foreach (var logEvent in logsResponse.Events)
-                Console.WriteLine(logEvent.Message);
+                var logsResponse = await _cloudWatchLogsClient.GetLogEventsAsync(new GetLogEventsRequest
+                {
+                    StartTime =  parsedStartDate,
+                    EndTime = parsedStartDate.AddHours(hour),
+                    Limit = 500,
+                    LogGroupName = ServiceName,
+                    LogStreamName = logstream.LogStreamName,
+                    StartFromHead = false,
+                });
+                events.AddRange(logsResponse.Events);
+            }
+
+            return events;
+
 
         }
         catch (ResourceNotFoundException)
@@ -326,7 +338,7 @@ public class AwsEcsService
     
     private async Task<Result> UpdateEcsImage(string task)
     {
-        Console.WriteLine($"updating service stack {ServiceStackName}");
+       Display($"Updating...");
         var template = await ClientCformation.DescribeStacksAsync(new DescribeStacksRequest
         {
             StackName = ServiceStackName
@@ -341,7 +353,6 @@ public class AwsEcsService
             UsePreviousTemplate = true
         });
       
-        Console.WriteLine("Waiting Stack");
         await _awsUtilFunctions.WaitUntilStackCreatedOrDeleted(ServiceStackName);
         var status = await _awsUtilFunctions.GetStackStatus(ServiceStackName);
         return _awsUtilFunctions.StackStatusIsSuccessfull(status) ? Result.Success(status): Result.Failure("updating app failed") ;
@@ -350,13 +361,13 @@ public class AwsEcsService
     private async Task<string> ImageDeployment(string dockerfile)
     {
         await _awsUtilFunctions.CreateReposityIfNotExist(RepoName);
-        Console.WriteLine("Build Image");
+        Display("Build Image");
         var (image, registry) = await _awsUtilFunctions.BuildImage(dockerfile, RepoName);
         var password = await _awsUtilFunctions.DecodeRegistryLoginTokenToPassword();
         await AwsUtilFunctions.LoginToRegistry(password, registry);
-        Console.WriteLine("Deploy Image");
+        Display("Deploy Image");
         await _awsUtilFunctions.DeployImageToEcr(image);
-        Console.WriteLine("Deploy Image Ended");
+        Display("Deploy Image Ended");
         return image;
     }
 
@@ -386,16 +397,14 @@ public class AwsEcsService
 
     }
     
-    public async Task RollBackList()
+    public async Task<List<ImageDetail>> RollBackList()
     {
         var images = await _ecrClient.DescribeImagesAsync(new DescribeImagesRequest
         {
             RepositoryName = RepoName
         });
-        foreach (var image in images.ImageDetails.OrderByDescending(p=>p.ImagePushedAt))
-        {
-            Console.WriteLine($"DateTime: {image.ImagePushedAt}, ImageTag: {string.Join(' ',image.ImageTags)} ");
-        }
+        return images.ImageDetails;
+      
     }
 
     public async Task<Result> CreateAlarm(string email)

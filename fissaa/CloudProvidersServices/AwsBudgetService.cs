@@ -98,7 +98,7 @@ public class AwsBudgetService
         var startDate = (DateTime.Today.ToString("yyyy-MM")+"-01");
         var endDate = DateTime.Today.ToString("yyyy-MM-dd");
 
-        var baseDomain = string.Join(".",domainName.Split(".")[^2..]);
+        // var baseDomain = string.Join(".",domainName.Split(".")[^2..]);
         var getCostAndUsageResponse = await _costExplorerClient.GetCostAndUsageAsync(new GetCostAndUsageRequest
         {
             Granularity = Granularity.DAILY,
@@ -124,7 +124,9 @@ public class AwsBudgetService
         foreach (var costResultByTime in getCostAndUsageResponse.ResultsByTime)
         {
             var date = costResultByTime.TimePeriod.Start;
-            var group = costResultByTime.Groups.Single(g => g.Keys.Contains($"app-domain${baseDomain}"));
+            var group = costResultByTime.Groups.SingleOrDefault(g => g.Keys.Contains($"app-domain${domainName}"));
+            if (group is null)
+                continue;
             var amount = float.Parse(group.Metrics.First().Value.Amount);
             pricePerDay.Add(date, amount);
         }

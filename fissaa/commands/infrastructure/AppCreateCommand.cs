@@ -1,5 +1,6 @@
 using CSharpFunctionalExtensions;
 using fissaa.CloudProvidersServices;
+using fissaa.Decorator;
 using Spectre.Console.Cli;
 using Spectre.Console;
 
@@ -11,15 +12,15 @@ public class AppCreateCommand:AsyncCommand<AppCreateCommandSettings>
     {
         var domainService = new AwsDomainService(settings.AwsSecretKey,settings.AwsAcessKey);
         var networkService = new AwsNetworkService(settings.AwsSecretKey, settings.AwsAcessKey,settings.DomainName);
-        var appService = new AwsEcsService(settings.AwsSecretKey,settings.AwsAcessKey,settings.DomainName);
+        var appService = new AwsEcsService(settings.AwsSecretKey,settings.AwsAcessKey,settings.DomainName,ConsoleDisplayDecorator.Display);
         if (settings.AddMonitor)
         {
-            Console.WriteLine("Please visit https://docs.aws.amazon.com/xray/latest/devguide/xray-ruby.html first,to check your integration with monitoring sdk");
-            Console.WriteLine("Wanna Continue y/N");
+            AnsiConsole.MarkupLine("Please visit https://docs.aws.amazon.com/xray/latest/devguide/xray-ruby.html first,to check your integration with monitoring sdk");
+            AnsiConsole.MarkupLine("Wanna Continue y/N");
             var decision = Console.ReadLine();
             if (decision is null || decision.ToLower() != "y")
                 return 0;
-            Console.WriteLine("Hint: We gonna add monitoring");    
+            AnsiConsole.MarkupLine("Hint: We gonna add monitoring");    
         }
         
         await AnsiConsole.Status()

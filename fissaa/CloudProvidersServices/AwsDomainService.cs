@@ -26,7 +26,7 @@ public class AwsDomainService
 
     }
 
-    public async Task CreateDomain(string domainName)
+    public async Task<List<string>> CreateDomain(string domainName)
     {
         Console.WriteLine("Create Hosted Zone...");
         var domainNameExist = await DomainNameExist(domainName);
@@ -42,6 +42,7 @@ public class AwsDomainService
            
         });
         Console.WriteLine("NameServers: ");
+        return response.DelegationSet.NameServers;
         response.DelegationSet.NameServers.ForEach(Console.WriteLine);
         Console.WriteLine("You need to add those nameservers to your dns provider");
         Console.WriteLine("Wait Until dns propagation work, means your dns provider recognize those nameservers, it may take 24h Max");

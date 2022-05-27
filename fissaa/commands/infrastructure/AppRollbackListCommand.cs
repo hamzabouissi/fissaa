@@ -9,7 +9,9 @@ public class AppRollbackListCommand:AsyncCommand<AppRollbackListSetting>
     public override async Task<int> ExecuteAsync(CommandContext context, AppRollbackListSetting settings)
     {
         var appService = new AwsEcsService(settings.AwsSecretKey,settings.AwsAcessKey,settings.DomainName);
-        await appService.RollBackList();
+        var imageDetails = await appService.RollBackList();
+        foreach (var image in imageDetails.OrderByDescending(p=>p.ImagePushedAt))
+            AnsiConsole.MarkupLine($"DateTime: {image.ImagePushedAt}, ImageTag: {string.Join(' ',image.ImageTags)} ");
         return 0;
     }
     

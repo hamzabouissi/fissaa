@@ -337,6 +337,7 @@ public class AwsUtilFunctions
             await _clientEcr.CreateRepositoryAsync(new CreateRepositoryRequest
             {
                 RepositoryName = reposityName,
+                ImageTagMutability = ImageTagMutability.IMMUTABLE
             });
         }
         catch (RepositoryAlreadyExistsException )

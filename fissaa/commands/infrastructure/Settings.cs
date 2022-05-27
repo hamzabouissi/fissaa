@@ -23,9 +23,9 @@ public sealed class NetworkCreateCommandSettings : InfrastructureSettings
 
 public sealed class AppLogsommandSettings : InfrastructureSettings
 {
-    [Description("format M/dd/yyyy hh:mm")]
+    [Description("format yyyy/MM/dd HH:mm:ss")]
     [CommandOption("--start-date")]
-    public string StartDate { get; set; } =(DateTime.Now-TimeSpan.FromMinutes(60)).ToString("M/dd/yyyy hh:mm");
+    public string StartDate { get; set; } = (DateTime.Now-TimeSpan.FromMinutes(60)).ToString("yyyy/MM/dd HH:mm:ss");
 
     [CommandOption("--hour")] public int Hour { get; set; } = 1;
 
@@ -35,8 +35,7 @@ public sealed class AppLogsommandSettings : InfrastructureSettings
         
         
         var parsed = DateTime.TryParseExact(StartDate, formats,null,
-            System.Globalization.DateTimeStyles.AllowWhiteSpaces |
-            System.Globalization.DateTimeStyles.AdjustToUniversal,out var parsedStartDate);
+            System.Globalization.DateTimeStyles.AllowWhiteSpaces,out var parsedStartDate);
         if (!parsed)
             return ValidationResult.Error("--start-date isn't valid");
         if (Hour>5 || Hour <0)
@@ -46,7 +45,7 @@ public sealed class AppLogsommandSettings : InfrastructureSettings
 
     public readonly string[] formats = 
     {
-        "M/dd/yyyy hh:mm"
+        "yyyy/MM/dd HH:mm:ss"
     };
 }
 

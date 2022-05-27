@@ -9,7 +9,11 @@ public class AppLogsCommand:AsyncCommand<AppLogsommandSettings>
     public override async Task<int> ExecuteAsync(CommandContext context, AppLogsommandSettings settings)
     {
         var appService = new AwsEcsService(settings.AwsSecretKey,settings.AwsAcessKey,settings.DomainName);
-        await appService.ListLogs(settings.StartDate,settings.Hour);
+        var logsEvents = await appService.ListLogs(settings.StartDate,settings.Hour);
+        foreach (var log in logsEvents)
+        {
+            AnsiConsole.WriteLine($"{log.Timestamp} {log.Message}" );
+        }
         return 0;
     }
     
