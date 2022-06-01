@@ -11,7 +11,7 @@ public class TemplateUseCommand:AsyncCommand<TemplateUseSettings>
     {
         var domainService = new AwsDomainService(settings.AwsSecretKey,settings.AwsAcessKey);
         var networkService = new AwsNetworkService(settings.AwsSecretKey, settings.AwsAcessKey, settings.DomainName);
-        var appService = new GhostTemplateService(settings.AwsSecretKey,settings.AwsAcessKey,settings.DomainName);
+        var appService = new GhostTemplateService(settings.AwsSecretKey,settings.AwsAcessKey,settings.DomainName,AnsiConsole.MarkupLine);
         var appStorage = new AwsStorageStack(settings.AwsSecretKey, settings.AwsAcessKey);
         if (settings.TemplateName == "ghost")
         {

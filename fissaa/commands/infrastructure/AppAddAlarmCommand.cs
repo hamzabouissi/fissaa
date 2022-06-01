@@ -16,10 +16,13 @@ public class AppAddAlarmCommand:AsyncCommand<AppAddAlarmSettings>
             .SpinnerStyle(Style.Parse("yellow bold"))
             .StartAsync(":bell: Creating Alarm Started", async ctx =>
             {
+                
                 var result = await appService.CreateAlarm(settings.Email);
                 if (result.IsFailure)
                     AnsiConsole.MarkupLine($"[red]{result.Error}[/]");
+                
                 AnsiConsole.MarkupLine($"[green]done[/]");
+                AnsiConsole.MarkupLine($"[grey]Note[/] [red]Accept subscription from your email [/]");
             });
         return 0;
     }

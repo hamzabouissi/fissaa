@@ -26,8 +26,9 @@ public sealed class AppLogsommandSettings : InfrastructureSettings
     [Description("format yyyy/MM/dd HH:mm:ss")]
     [CommandOption("--start-date")]
     public string StartDate { get; set; } = (DateTime.Now-TimeSpan.FromMinutes(60)).ToString("yyyy/MM/dd HH:mm:ss");
-
-    [CommandOption("--hour")] public int Hour { get; set; } = 1;
+    
+    [Description("hour must be between 0 and 5")]
+    [CommandOption("--hour")] public int Hour { get; set; } = 2;
 
 
     public override ValidationResult Validate()

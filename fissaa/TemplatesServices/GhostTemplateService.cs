@@ -15,13 +15,13 @@ public class GhostTemplateService
     public readonly RegionEndpoint Region = RegionEndpoint.USEast1;
 
 
-    public GhostTemplateService(string awsSecretKey,string awsAccessKey, string domainName)
+    public GhostTemplateService(string awsSecretKey,string awsAccessKey, string domainName,Action<string> display=null)
     {
         _secretKey = awsSecretKey;
         _accessKey = awsAccessKey;
         _domainName = domainName;
         
-        _ecsService = new AwsEcsService(_secretKey,awsAccessKey,_domainName);
+        _ecsService = new AwsEcsService(_secretKey,awsAccessKey,_domainName,display);
         _awsUtilFunctions = new AwsUtilFunctions(awsSecretKey, awsAccessKey);
 
     }

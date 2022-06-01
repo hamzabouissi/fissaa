@@ -287,7 +287,7 @@ public class AwsEcsService
             new()
             {
                 ParameterKey = "DesiredCount",
-                ParameterValue = "2"
+                ParameterValue = "1"
             },
             
         };
@@ -315,7 +315,7 @@ public class AwsEcsService
                 {
                     StartTime =  parsedStartDate,
                     EndTime = parsedStartDate.AddHours(hour),
-                    Limit = 500,
+                    Limit = 200,
                     LogGroupName = ServiceName,
                     LogStreamName = logstream.LogStreamName,
                     StartFromHead = false,
@@ -323,7 +323,8 @@ public class AwsEcsService
                 events.AddRange(logsResponse.Events);
             }
 
-            return events;
+            var orderedEvents = events.OrderBy(e => e.Timestamp).ToList();
+            return orderedEvents;
 
 
         }

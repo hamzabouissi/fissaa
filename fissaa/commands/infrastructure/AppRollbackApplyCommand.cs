@@ -13,7 +13,7 @@ public class AppRollbackApplyCommand:AsyncCommand<AppRollbackApplySetting>
             .AutoRefresh(true)
             .Spinner(Spinner.Known.Dots9)
             .SpinnerStyle(Style.Parse("yellow bold"))
-            .StartAsync("Rolling back  started", async ctx =>
+            .StartAsync("Rolling back started", async ctx =>
             {
                 var result = await appService.RollBackApply(settings.Latest, settings.ImageVersion);
                 if (result.IsFailure)

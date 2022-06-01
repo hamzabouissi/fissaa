@@ -11,7 +11,6 @@ public class BudgetShowCommand:AsyncCommand<BudgetShowCommandSettings>
         
         var awsBudgetService = new AwsBudgetService(settings.AwsSecretKey, settings.AwsAcessKey);
         var listCost = await awsBudgetService.ListCost(settings.DomainName);
-        var baseDomain = string.Join(".",settings.DomainName.Split(".")[^2..]);
         AnsiConsole.MarkupLine($"[red]Your prices may take 1-day to appear on AWS [/] ");
         AnsiConsole.MarkupLine($"[grey]Total[/]: [green]{listCost.Values.Sum()} :money_bag:[/]");
         foreach (var (date,price) in listCost)
