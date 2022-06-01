@@ -2,7 +2,7 @@ This project is an experiment  of my knowledge, I'd be happy if anyone find it u
 
 
 
-[TOC]
+
 
 # Introduction
 
@@ -89,7 +89,11 @@ COMMANDS:
 
 Note: be sure this AWS credentials belongs to an user who have the required policies.
 
-# Deployment
+# App Commands
+
+![fissaa-deployment-commands](https://user-images.githubusercontent.com/20321838/171491938-e3683ec1-1f7f-430b-beeb-52c08f9c4163.png)
+
+## Deploy
 
 Fissaa provide a simple one command to deploy your containerized application:
 
@@ -105,7 +109,8 @@ OPTIONS:
         --dockerfile-path 
 ```
 
-image
+![fissaa-deploy-demo](https://user-images.githubusercontent.com/20321838/171491733-95b16513-d72e-4bf1-9e4d-dd5632b15d9a.png)
+
 
 
 
@@ -130,8 +135,9 @@ to deploy and add monitoring, you can run the following command:
 ```bash
 fissaa infrastructure yourdomain.com deploy --add-monitor
 ```
+![fissaa-deploy-add-monitor](https://user-images.githubusercontent.com/20321838/171491792-6d3c0875-bf2a-435d-b3c7-f841cc91accf.png)
 
-image
+
 
 ## Logging
 
@@ -148,7 +154,8 @@ OPTIONS:
         --hour          hour must be between 0 and 5
 ```
 
-image
+
+![fissaa-logs-display](https://user-images.githubusercontent.com/20321838/171492161-971002dd-3237-4d49-a054-1e30cc0a7ee1.png)
 
 
 
@@ -212,6 +219,7 @@ To list your application cost on a day to day basis, you can see with the follow
 ```bash
 fissaa budget <domain> cost-list
 ```
+![fissaa-budget-list](https://user-images.githubusercontent.com/20321838/171492334-25da55e9-3716-43a7-85bb-bed5db9aa0f9.png)
 
 
 
@@ -246,6 +254,7 @@ OPTIONS:
     -h, --help    Prints help information
 ```
 
+![fisssaa-template-ghost-deploy](https://user-images.githubusercontent.com/20321838/171491849-d4657296-b2a6-4853-9e96-f95a52b04ed0.png)
 
 
 # AWS Storage Servies(RDS,S3)
