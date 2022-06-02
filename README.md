@@ -17,7 +17,7 @@ The policies may seem too open  for some developers, but I didn't focus so much 
 
 you can open a pull request if you find it a problem and I will solve it.
 
-Note: to add this policies you need root account.
+Note: to add those policies you need root account.
 
 ## AWS Managed Policies
 
@@ -117,15 +117,13 @@ OPTIONS:
 
 ## Update 
 
-updating your deployed application is the same way as deploying it, you just the same command
+updating your deployed application is the same way as deploying it, you just run the same command and it will update your code
 
 ```bash
 fissaa infrastructure yourdomain.com deploy
 ```
 
-/image
 
-and it will update your code
 
 # Monitoring
 
