@@ -8,7 +8,7 @@ This project is an experiment  of my knowledge, I'd be happy if anyone find it u
 
 Fissaa is a CLI that helped me deploy  applications to AWS ECS without the headache of setting-up domain registration,TLS Certification, Load Balancing,Rolling Back and budget monitoring.
 
-Fissaa is a Tunisian world means  speed-up .
+Fissaa is a Tunisian word meaning speed-up.
 # Prerequisite
 
 ## AWS Policies
