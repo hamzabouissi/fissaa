@@ -1,10 +1,9 @@
-This project is an experiment  of my knowledge, I'd be happy if anyone find it useful.
-
-
 ![image](https://user-images.githubusercontent.com/20321838/176407916-4e9a0b91-051c-4a60-9ad8-bec49b95f125.png)
 
+credits for houda maabrouk for the logo: https://www.linkedin.com/in/maabrouk-houda-065748202/
 
 
+This project is an experiment  of my knowledge, I'd be happy if anyone find it useful.
 
 # Introduction
 
